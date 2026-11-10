@@ -117,7 +117,7 @@
   .grp-head.lv3 { background: var(--g3-bg); color: var(--g3-fg); } .grp-head.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
   .grp-sec.empty .grp-head { opacity: .75; padding: 2px 10px; }
   .grp-sec.empty .grp-head button { min-height: 32px; }
-  /* Ranking: arrows always; drag handle on wide layouts */
+  /* Ranking: the ▲▼ buttons, and a drag handle on the left (only the handle captures touch, so scrolling elsewhere is never a drag) */
   .roster-row.drag { opacity: .45; }
   .roster-row.over { outline: 2px solid var(--accent); border-radius: 6px; }
   .roster-row .grip { grid-area: grip; min-width: 32px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 20px; color: var(--muted); }
@@ -142,9 +142,17 @@
   .panel { display: grid; gap: clamp(10px, 2.5vw, 16px); }
   .panel[hidden] { display: none; }
   @container roster (max-width: 600px) {
-    .roster-row { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "nm lvl rm" "sub sub sub"; row-gap: 0; padding: 8px 0; }
-    .roster-row .grip { display: none; }
+    .roster-row { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "grip nm lvl rm" "grip sub sub sub"; row-gap: 0; padding: 8px 0; column-gap: 6px; }
+    .roster-row .grip { min-width: 36px; }
     .roster-row .sub { grid-area: sub; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  }
+  /* very small phones (about 320 px): give the name room, and leave ranking to the drag handle */
+  @container roster (max-width: 300px) {
+    .roster-row { column-gap: 4px; }
+    .roster-row .grip { min-width: 30px; }
+    .roster-row .mv { display: none; }
+    .roster-row select.lvl { padding-left: 6px; padding-right: 2px; }
+    .roster-row .rm button { min-width: 40px; padding-left: 8px; padding-right: 8px; }
   }
   .rounds { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
   .round { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--card); }
@@ -179,15 +187,14 @@
   .round-actions { display: flex; gap: 6px; }
   .edited { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
   .swap-hint { font-size: 13px; margin: 0 0 8px; color: var(--muted); }
-  /* Swap mode: every player becomes a chip you can tap (then tap another) or drag onto another */
-  .pl { font: inherit; color: inherit; text-align: inherit; background: transparent; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; min-height: 44px; display: inline-flex; align-items: center; gap: 2px; max-width: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  /* Swap mode: every player becomes a chip: tap one, then tap another (no dragging, so scrolling never moves anyone) */
+  .pl { font: inherit; color: inherit; text-align: inherit; background: transparent; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; min-height: 44px; display: inline-flex; align-items: center; gap: 2px; max-width: 100%; touch-action: manipulation; cursor: grab; user-select: none; -webkit-user-select: none; }
   .team.b .pl { justify-content: flex-end; }
   .pl.sel { border: 2px solid var(--accent); background: var(--chip); }
-  .pl.over { border: 2px solid var(--accent); background: var(--chip); }
-  .pl.drag { opacity: .45; }
   .seat { flex-direction: column; line-height: 1.25; font: inherit; color: var(--muted); background: transparent; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; max-width: 100%; cursor: pointer; font-size: 14px; }
-  .seat.ready, .seat.over { border: 2px solid var(--accent); color: var(--text); background: var(--chip); }
+  .seat.ready { border: 2px solid var(--accent); color: var(--text); background: var(--chip); }
   .edit-msg { font-size: 13px; margin: 0 0 8px; color: var(--danger); }
+  body.dragging { user-select: none; -webkit-user-select: none; }
   .ghost { position: fixed; z-index: 10; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--card); border: 2px solid var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.25); font-size: 15px; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
   th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
@@ -231,7 +238,7 @@
       <h2>Players</h2>
       <ul>
         <li>Put each player in a group: <b>1</b> is the strongest, then <b>2</b> and <b>3</b>; <b>B</b> is Beginner. Use only the groups you need.</li>
-        <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, with the ▲▼ buttons (or, on wide screens, drag the ⋮⋮ handle). A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
+        <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, by dragging the ⋮⋮ handle on the left of a row, or with the ▲▼ buttons. A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
         <li>Tick <b>No singles</b> on a player to keep them off the singles court and from being the lone player in a 2 v 1 (including beginners). If nobody else can fill the spot, the round shows a warning.</li>
         <li>Tap the pencil next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: it clears the players, rounds and name after asking (the number of rounds and session style are kept). This cannot be undone.</li>
         <li>Untick <b>Active</b> for an injury or departure, and tick it again for a late arrival. Then regenerate on the Fixtures tab.</li>
@@ -243,7 +250,7 @@
       <ul>
         <li><b>Generate rounds</b> (it reads <b>Regenerate rounds</b> once there are fixtures) rebuilds every round that is not locked. It is greyed out when nothing has changed since the rounds were generated, because the same settings always give the same rounds. Change the roster, ranking, style, round count or a lock and it comes back. <b>Lock</b> keeps a round exactly as it is.</li>
         <li><b>Session style</b>: choose <b>Competitive</b>, <b>Social</b> or <b>Club sheets</b> (greyed out unless there are exactly 5 rounds and 6 to 14 active players). See <i>How the fixtures work</i> below for the difference.</li>
-        <li><b>Edit</b> a round to swap players: tap one, then another, or drag one onto another. Singles and 2 v 1 courts show empty seats: move a player onto one to grow that court (singles becomes 2 v 1, 2 v 1 becomes doubles). The court they left adjusts (doubles becomes 2 v 1, 2 v 1 becomes singles). With fewer than 12 players the singles match is on Court 3, so the half court (Court 4) is only used when you need it. Court 4 only takes singles, so it has no empty seats. A round you change is locked so Regenerate leaves it alone. Unlock it to let Regenerate redo it.</li>
+        <li><b>Edit</b> a round to swap players: tap one, then tap another. Singles and 2 v 1 courts show empty seats: move a player onto one to grow that court (singles becomes 2 v 1, 2 v 1 becomes doubles). The court they left adjusts (doubles becomes 2 v 1, 2 v 1 becomes singles). With fewer than 12 players the singles match is on Court 3, so the half court (Court 4) is only used when you need it. Court 4 only takes singles, so it has no empty seats. A round you change is locked so Regenerate leaves it alone. Unlock it to let Regenerate redo it.</li>
         <li><b>Clear All</b> removes every round, locked ones too, after asking. Players and settings are kept. Reducing the number of rounds removes them from the end, and an <b>Undo</b> button appears for a moment.</li>
         <li>Changing the roster, groups or settings after generating shows a notice. Regenerate to apply the change to unlocked rounds.</li>
       </ul>
@@ -1306,7 +1313,7 @@ function formatRound(round, players) {
         '<div class="round-head"><h3>Round ' + r.number + (edit ? '<span class="edit-badge">Editing</span>' : '') + '</h3><div class="round-actions">' +
         '<button data-action="swapmode"' + (has ? '' : ' disabled') + ' aria-pressed="' + edit + '">' + (edit ? 'Done' : 'Edit') + '</button>' +
         '<button data-action="lock"' + (has ? '' : ' disabled') + '>' + (r.locked ? '🔒 Locked' : 'Lock') + '</button></div></div>';
-      if (edit) html += '<p class="swap-hint"><b>Tap Done when you have finished.</b> Tap two players to swap them, or drag one onto another. Singles and 2 v 1 courts have empty seats: move a player onto one to add them to that court.</p>' + (editMsg ? '<p class="edit-msg" role="alert">' + esc(editMsg) + '</p>' : '');
+      if (edit) html += '<p class="swap-hint"><b>Tap Done when you have finished.</b> Tap two players to swap them. Singles and 2 v 1 courts have empty seats: move a player onto one to add them to that court.</p>' + (editMsg ? '<p class="edit-msg" role="alert">' + esc(editMsg) + '</p>' : '');
       if (!has) html += '<div class="muted">Not generated yet.</div>';
       r.courts.forEach(function (c) {
         var label = c.type === 'doubles' ? 'Doubles' : c.type === '2v1' ? '2 v 1' : 'Singles';
@@ -1453,77 +1460,44 @@ function formatRound(round, players) {
     if (el) el.focus({ preventScroll: true });
   }
 
-  // Drag and drop (pointer events: mouse, pen and touch). A drag only starts after the pointer moves a few
-  // pixels, so a plain tap still selects. Drops are only accepted on another player in the same round.
-  (function () {
-    var d = null;
-    function chipAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.pl[data-pid], .seat[data-slot]') : null; }
-    function clearOver() { document.querySelectorAll('.pl.over, .seat.over').forEach(function (n) { n.classList.remove('over'); }); }
-    function end() {
-      if (!d) return;
-      if (d.ghost) d.ghost.remove();
-      d.el.classList.remove('drag'); clearOver();
-      d = null;
-    }
-    document.addEventListener('pointerdown', function (e) {
-      var el = e.target.closest ? e.target.closest('.pl[data-pid]') : null;
-      if (!el || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      d = { el: el, id: el.getAttribute('data-pid'), round: el.closest('[data-round]').getAttribute('data-round'), x: e.clientX, y: e.clientY, ghost: null, pid: e.pointerId };
-    });
-    document.addEventListener('pointermove', function (e) {
-      if (!d || e.pointerId !== d.pid) return;
-      if (!d.ghost) {
-        if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return;
-        d.ghost = document.createElement('div'); d.ghost.className = 'ghost'; d.ghost.textContent = d.el.firstChild ? d.el.firstChild.textContent : '';
-        document.body.appendChild(d.ghost); d.el.classList.add('drag');
-      }
-      d.ghost.style.left = (e.clientX + 8) + 'px'; d.ghost.style.top = (e.clientY + 8) + 'px';
-      clearOver();
-      var t = chipAt(e.clientX, e.clientY);
-      if (t && t !== d.el && t.closest('[data-round]').getAttribute('data-round') === d.round) t.classList.add('over');
-    });
-    document.addEventListener('pointerup', function (e) {
-      if (!d || e.pointerId !== d.pid) return;
-      var moved = !!d.ghost, from = d;
-      var t = moved ? chipAt(e.clientX, e.clientY) : null;
-      end();
-      if (!moved) return;
-      suppressClick = true; setTimeout(function () { suppressClick = false; }, 0);
-      if (t && t.getAttribute('data-pid') !== from.id && t.closest('[data-round]').getAttribute('data-round') === from.round) {
-        editMsg = '';
-        if (t.hasAttribute('data-slot')) doSeat(+from.round, +t.getAttribute('data-slot'), from.id, t.getAttribute('data-side'));
-        else doSwap(+from.round, from.id, t.getAttribute('data-pid'));
-        selId = null; renderRounds(); focusChip(+from.round, from.id);
-      }
-    });
-    document.addEventListener('pointercancel', end);
-  })();
-
-  // Drag to rank (wide layouts): grab a row's handle and drop it on another row of the same group. A drop on a
+  // Drag to rank (all layouts): grab a row's handle and drop it on another row of the same group. A drop on a
   // row in a different group is ignored, because ranks are only compared within a group.
   (function () {
     var d = null;
     function rowAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.roster-row') : null; }
     function sameGroup(row) { return row && row.closest('.grp-sec') === d.sec; }
     function clearOver() { document.querySelectorAll('.roster-row.over').forEach(function (n) { n.classList.remove('over'); }); }
-    function end() { if (!d) return; if (d.ghost) d.ghost.remove(); d.row.classList.remove('drag'); clearOver(); d = null; }
+    var raf = 0;
+    function end() { if (!d) return; if (d.ghost) d.ghost.remove(); d.row.classList.remove('drag'); clearOver(); document.body.classList.remove('dragging'); cancelAnimationFrame(raf); d = null; }
+    function mark() {
+      clearOver();
+      var t = rowAt(d.cx, d.cy);
+      if (t && t !== d.row && sameGroup(t)) t.classList.add('over');
+    }
+    // Long groups can be taller than the screen: hold the finger near the top or bottom edge to scroll.
+    function autoScroll() {
+      if (!d || !d.ghost) return;
+      var edge = 70, dy = d.cy < edge ? -Math.ceil((edge - d.cy) / 5) : d.cy > window.innerHeight - edge ? Math.ceil((d.cy - (window.innerHeight - edge)) / 5) : 0;
+      if (dy) { window.scrollBy(0, dy); mark(); }
+      raf = requestAnimationFrame(autoScroll);
+    }
     document.addEventListener('pointerdown', function (e) {
       var g = e.target.closest ? e.target.closest('.grip') : null;
       if (!g || (e.pointerType === 'mouse' && e.button !== 0)) return;
       var row = g.closest('.roster-row');
-      d = { row: row, id: row.getAttribute('data-id'), sec: row.closest('.grp-sec'), x: e.clientX, y: e.clientY, ghost: null, pid: e.pointerId };
+      d = { row: row, id: row.getAttribute('data-id'), sec: row.closest('.grp-sec'), x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, ghost: null, pid: e.pointerId };
     });
     document.addEventListener('pointermove', function (e) {
       if (!d || e.pointerId !== d.pid) return;
       if (!d.ghost) {
         if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return;
         d.ghost = document.createElement('div'); d.ghost.className = 'ghost'; d.ghost.textContent = d.row.querySelector('.nm').value || 'player';
-        document.body.appendChild(d.ghost); d.row.classList.add('drag');
+        document.body.appendChild(d.ghost); d.row.classList.add('drag'); document.body.classList.add('dragging');
+        raf = requestAnimationFrame(autoScroll);
       }
-      d.ghost.style.left = (e.clientX + 8) + 'px'; d.ghost.style.top = (e.clientY + 8) + 'px';
-      clearOver();
-      var t = rowAt(e.clientX, e.clientY);
-      if (t && t !== d.row && sameGroup(t)) t.classList.add('over');
+      d.cx = e.clientX; d.cy = e.clientY;
+      d.ghost.style.left = (e.clientX + 12) + 'px'; d.ghost.style.top = (e.clientY - 52) + 'px';   // above the finger, so it is not hidden under it
+      mark();
     });
     document.addEventListener('pointerup', function (e) {
       if (!d || e.pointerId !== d.pid) return;
