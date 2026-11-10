@@ -9,24 +9,24 @@
   :root {
     --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #6a737d; --line: #dde1e6;
     --accent: #1f7a4d; --accent-text: #ffffff; --warn-bg: #fff4d6; --warn-text: #6b4e00;
-    --danger: #b3261e; --lock: #2b5fb4; --chip: #eef1f4; --lock-bg: #e3e6ea;
-    --g1-bg: #cfe0ff; --g1-fg: #17356e; --g2-bg: #ffd9b3; --g2-fg: #6e2c00;
+    --danger: #b3261e; --lock: #2b5fb4; --chip: #eef1f4; --lock-bg: #e3e6ea; --played-bg: #d9eafb; --played-line: #a9c9ea;
+    --g1-bg: #e4d6fb; --g1-fg: #43217a; --g2-bg: #ffd9b3; --g2-fg: #6e2c00;
     --g3-bg: #fbe98a; --g3-fg: #574400; --gb-bg: #c6eed3; --gb-fg: #0f4a28;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #14171a; --card: #1e2227; --text: #e8eaed; --muted: #9aa3ad; --line: #333a42;
       --accent: #3fae7a; --accent-text: #0b1d14; --warn-bg: #3a3014; --warn-text: #f1d98a;
-      --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c;
-      --g1-bg: #1f3d6b; --g1-fg: #c4dbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
+      --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c; --played-bg: #1b2d42; --played-line: #34567c;
+      --g1-bg: #3e2a66; --g1-fg: #dccbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
       --g3-bg: #54470d; --g3-fg: #f6e68c; --gb-bg: #1b4a30; --gb-fg: #b9edcb;
     }
   }
   :root[data-theme="dark"] {
     --bg: #14171a; --card: #1e2227; --text: #e8eaed; --muted: #9aa3ad; --line: #333a42;
     --accent: #3fae7a; --accent-text: #0b1d14; --warn-bg: #3a3014; --warn-text: #f1d98a;
-    --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c;
-    --g1-bg: #1f3d6b; --g1-fg: #c4dbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
+    --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c; --played-bg: #1b2d42; --played-line: #34567c;
+    --g1-bg: #3e2a66; --g1-fg: #dccbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
     --g3-bg: #54470d; --g3-fg: #f6e68c; --gb-bg: #1b4a30; --gb-fg: #b9edcb;
   }
   * { box-sizing: border-box; }
@@ -94,14 +94,23 @@
   /* Session name, edited in place inside the title */
   .roster-row.unnamed input.nm { border-color: var(--danger); }
   .roster-row.unnamed .opts label:first-child { opacity: .5; }
-  .name-wrap, .name-edit { display: none; }
-  h1.has-name .name-wrap { display: inline-flex; align-items: baseline; gap: 4px; max-width: 100%; }
-  h1:not(.has-name) .name-edit { display: inline-flex; }
-  header #session-name { font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; border-bottom: 1px dashed var(--muted); border-radius: 0; padding: 0 2px; min-height: 0; width: 8ch; max-width: 100%; min-width: 6ch; }
+  .name-edit { display: none; }
+  .name-wrap { display: inline-flex; align-items: baseline; gap: 4px; max-width: 100%; }
+  h1:not(.has-name) .name-wrap .colon { display: none; }
+  h1:not(.has-name) .name-wrap { margin-left: 14px; margin-top: 6px; }
+  header #session-name { font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; border-bottom: 1px dashed var(--muted); border-radius: 0; padding: 0 2px; min-height: 0; width: 8ch; max-width: 100%; min-width: 6ch; text-overflow: ellipsis; }
   header #session-name:focus { outline: none; border-bottom: 2px solid var(--accent); }
-  header #session-name::placeholder { font-weight: 500; color: var(--muted); }
+  header #session-name::placeholder { font-weight: 500; font-style: italic; color: var(--muted); opacity: 1; }
   .name-edit { vertical-align: middle; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; margin-left: 2px; border: 0; background: transparent; color: var(--muted); font-size: 16px; }
   .confirm-btns { display: inline-flex; gap: 6px; flex: none; }
+  /* Session-name prompt: shown when a new session starts, and on the very first visit */
+  .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, .5); }
+  .modal[hidden] { display: none; }
+  .modal-card { width: min(420px, 100%); display: grid; gap: 12px; padding: 18px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+  .modal-card h2 { margin: 0; font-size: 18px; }
+  .modal-card p { margin: 0; font-size: 14px; color: var(--muted); }
+  .modal-card input[type=text].bad { border-color: var(--danger); }
+  .modal-card .confirm-btns { justify-content: flex-end; }
   .banner { padding: 8px 10px; border-radius: 7px; background: var(--warn-bg); color: var(--warn-text); margin: 8px 0; font-size: 13px; }
   /* Roster responds to ITS OWN width (container query), not the screen's: it stays correct in
      split-view windows and when a foldable changes size, with no fixed device breakpoints. */
@@ -157,13 +166,28 @@
   .rounds { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
   .round { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--card); }
   .round.locked { border-color: var(--lock); background: var(--lock-bg); }
+  /* A round marked as played: greyed out with a slash through it. It stays locked until marked unplayed. */
+  .round.played { position: relative; border-color: var(--played-line); background: var(--played-bg); }
+  .round.played::after { content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
+    background: linear-gradient(to top right, transparent calc(50% - 1px), var(--muted) calc(50% - 1px), var(--muted) calc(50% + 1px), transparent calc(50% + 1px)); opacity: .55; }
+  .round.played .court, .round.played .sit { opacity: .7; }
+  .padl, .ico { display: block; }
+  /* Action buttons are tinted with the colour of the card they will produce */
+  .round:not(.locked) [data-action="lock"]:not(:disabled) { background: var(--lock-bg); border-color: var(--lock); }
+  .round [data-action="played"]:not(:disabled) { background: var(--played-bg); border-color: var(--played-line); }
+  .icon-btn { min-width: 44px; padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; }
+  .round-actions button { white-space: nowrap; }
+  .locked-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--lock); border: 1px solid var(--lock); font-size: 12px; font-weight: 600; vertical-align: 2px; }
+  button.played-badge { cursor: pointer; border: 0; min-height: 0; margin-left: 4px; padding: 7px 12px; font: inherit; font-size: 12px; font-weight: 600; }
+  button.played-badge .x { margin-left: 4px; font-size: 11px; opacity: .85; }
+  .played-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--lock); color: var(--card); font-size: 12px; font-weight: 600; vertical-align: 2px; }
   /* Edit mode is modal: the round being edited is highlighted and everything else is dimmed and inert. */
   .round.editing { border: 2px solid var(--accent); background: var(--chip); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); padding: 11px; }
   .round.editing .court { background: var(--card); }
   .round.paused, .dim-edit { opacity: .4; pointer-events: none; user-select: none; -webkit-user-select: none; }
   .edit-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 12px; font-weight: 600; vertical-align: 2px; }
   .round.editing [data-action="swapmode"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
-  .round-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .round-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .round-head h3 { margin: 0; font-size: 15px; }
   .court { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
   .court-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
@@ -229,7 +253,7 @@
 <body>
 <header>
   <div class="head-row">
-    <h1 id="title"><svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false"><g transform="rotate(-40 16 16)"><rect x="9" y="1.5" width="14" height="18" rx="6.5" fill="var(--accent)"/><rect x="14" y="18.5" width="4" height="8" rx="1.2" fill="var(--text)" opacity=".8"/><rect x="13.2" y="26" width="5.6" height="3.6" rx="1.4" fill="var(--text)"/><g fill="var(--card)" opacity=".85"><circle cx="13" cy="6.5" r="1.1"/><circle cx="19" cy="6.5" r="1.1"/><circle cx="16" cy="10" r="1.1"/><circle cx="12.3" cy="13.5" r="1.1"/><circle cx="19.7" cy="13.5" r="1.1"/></g></g></svg><span class="ttl">Pickleball Session Manager</span><span class="name-wrap" id="name-wrap"><span aria-hidden="true">:</span> <input type="text" id="session-name" placeholder="Session name" maxlength="60" aria-label="Session name (tap to edit)" autocomplete="off" enterkeyhint="done"></span><button type="button" id="name-edit" class="name-edit" aria-label="Name this session" title="Name this session">&#9998;</button></h1>
+    <h1 id="title"><svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false"><g transform="rotate(-40 16 16)"><rect x="9" y="1.5" width="14" height="18" rx="6.5" fill="var(--accent)"/><rect x="14" y="18.5" width="4" height="8" rx="1.2" fill="var(--text)" opacity=".8"/><rect x="13.2" y="26" width="5.6" height="3.6" rx="1.4" fill="var(--text)"/><g fill="var(--card)" opacity=".85"><circle cx="13" cy="6.5" r="1.1"/><circle cx="19" cy="6.5" r="1.1"/><circle cx="16" cy="10" r="1.1"/><circle cx="12.3" cy="13.5" r="1.1"/><circle cx="19.7" cy="13.5" r="1.1"/></g></g></svg><span class="ttl">Pickleball Session Manager</span><span class="name-wrap" id="name-wrap"><span class="colon" aria-hidden="true">:</span> <input type="text" id="session-name" placeholder="Edit session name" maxlength="60" aria-label="Session name (tap to edit)" autocomplete="off" enterkeyhint="done"></span><button type="button" id="name-edit" class="name-edit" aria-label="Name this session" title="Name this session">&#9998;</button></h1>
     <button type="button" class="new-btn" data-action="newsession" aria-label="New session"><span aria-hidden="true">+ New<span class="long"> session</span></span></button>
     <button type="button" id="info-btn" class="info-btn" aria-label="Help for this page" aria-expanded="false" aria-controls="info-pop"><span aria-hidden="true">i</span></button>
   </div>
@@ -240,7 +264,7 @@
         <li>Put each player in a group: <b>1</b> is the strongest, then <b>2</b> and <b>3</b>; <b>B</b> is Beginner. Use only the groups you need.</li>
         <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, by dragging the ⋮⋮ handle on the left of a row, or with the ▲▼ buttons. A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
         <li>Tick <b>No singles</b> on a player to keep them off the singles court and from being the lone player in a 2 v 1 (including beginners). If nobody else can fill the spot, the round shows a warning.</li>
-        <li>Tap the pencil next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: it clears the players, rounds and name after asking (the number of rounds and session style are kept). This cannot be undone.</li>
+        <li>Tap <i>Edit session name</i> next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: after you confirm, it asks for a name (it suggests today's day, such as "Thursday") and then clears the players and rounds (the number of rounds and session style are kept). This cannot be undone.</li>
         <li>Untick <b>Active</b> for an injury or departure, and tick it again for a late arrival. Then regenerate on the Fixtures tab.</li>
         <li>Players already used in a round can be deactivated but not removed.</li>
       </ul>
@@ -248,9 +272,9 @@
     <div id="info-fixtures" hidden>
       <h2>Fixtures</h2>
       <ul>
-        <li><b>Generate rounds</b> (it reads <b>Regenerate rounds</b> once there are fixtures) rebuilds every round that is not locked. It is greyed out when nothing has changed since the rounds were generated, because the same settings always give the same rounds. Change the roster, ranking, style, round count or a lock and it comes back. <b>Lock</b> keeps a round exactly as it is.</li>
+        <li><b>Generate rounds</b> (it reads <b>Regenerate rounds</b> once there are fixtures) rebuilds every round that is not locked. It is greyed out when nothing has changed since the rounds were generated, because the same settings always give the same rounds. Change the roster, ranking, style, round count or a lock and it comes back. Each round card has icon buttons: the <b>pencil</b> edits the round, the <b>padlock</b> locks it, or unlocks it again when it is locked (a locked round shows a <i>Locked</i> badge, is kept exactly as it is, and its pencil is hidden until you unlock it), and the <b>two touching paddles</b> (the thank-you gesture) mark the round as completed: the card is greyed out with a slash through it and stays locked. Tap the <b>&#10005;</b> on a round's <i>Completed</i> badge to bring it back, and the round goes back to being locked or unlocked as it was before. Press and hold or hover an icon to see its name.</li>
         <li><b>Session style</b>: choose <b>Competitive</b>, <b>Social</b> or <b>Club sheets</b> (greyed out unless there are exactly 5 rounds and 6 to 14 active players). See <i>How the fixtures work</i> below for the difference.</li>
-        <li><b>Edit</b> a round to swap players: tap one, then tap another. Singles and 2 v 1 courts show empty seats: move a player onto one to grow that court (singles becomes 2 v 1, 2 v 1 becomes doubles). The court they left adjusts (doubles becomes 2 v 1, 2 v 1 becomes singles). With fewer than 12 players the singles match is on Court 3, so the half court (Court 4) is only used when you need it. Court 4 only takes singles, so it has no empty seats. A round you change is locked so Regenerate leaves it alone. Unlock it to let Regenerate redo it.</li>
+        <li>Use the pencil to edit a round and swap players: tap one, then tap another. Singles and 2 v 1 courts show empty seats: move a player onto one to grow that court (singles becomes 2 v 1, 2 v 1 becomes doubles). The court they left adjusts (doubles becomes 2 v 1, 2 v 1 becomes singles). With fewer than 12 players the singles match is on Court 3, so the half court (Court 4) is only used when you need it. Court 4 only takes singles, so it has no empty seats. A round you change is locked so Regenerate leaves it alone. Unlock it to let Regenerate redo it.</li>
         <li><b>Clear All</b> removes every round, locked ones too, after asking. Players and settings are kept. Reducing the number of rounds removes them from the end, and an <b>Undo</b> button appears for a moment.</li>
         <li>Changing the roster, groups or settings after generating shows a notice. Regenerate to apply the change to unlocked rounds.</li>
       </ul>
@@ -275,6 +299,14 @@
   <div class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="true" data-tab="players">Players</button>
     <button type="button" role="tab" id="tab-fixtures" aria-controls="panel-fixtures" aria-selected="false" tabindex="-1" data-tab="fixtures">Fixtures</button>
+  </div>
+</div>
+<div id="name-modal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="nm-title" aria-describedby="nm-sub">
+    <h2 id="nm-title">Name this session</h2>
+    <p id="nm-sub">Give the session a name, such as the day it is played on.</p>
+    <input type="text" id="nm-input" maxlength="60" autocomplete="off" enterkeyhint="done" aria-label="Session name" placeholder="Session name">
+    <div class="confirm-btns"><button type="button" id="nm-cancel">Cancel</button> <button type="button" class="primary" id="nm-ok">Start session</button></div>
   </div>
 </div>
 <main>
@@ -1099,7 +1131,7 @@ function formatRound(round, players) {
 (function () {
   'use strict';
   var KEY = 'pickleball-groups-v1';
-  var S = load() || fresh();
+  var S = load(), firstRun = !S; if (!S) S = fresh();
 
   function newId() { return 'p' + Math.random().toString(36).slice(2, 9); }
   function fresh() {
@@ -1108,7 +1140,7 @@ function formatRound(round, players) {
     var demo = /[?&]demo(=|&|$)/.test(location.search);
     for (var i = 1; demo && i <= MAX_PLAYERS; i++) players.push({ id: newId(), name: 'Player ' + i, level: i <= 5 ? 1 : i <= 10 ? 2 : 3, active: true, singlesOptOut: false });
     var rounds = [];
-    for (var r = 1; r <= DEFAULT_ROUNDS; r++) rounds.push({ number: r, locked: false, courts: [], sitOuts: [], warnings: [] });
+    for (var r = 1; r <= DEFAULT_ROUNDS; r++) rounds.push({ number: r, locked: false, played: false, courts: [], sitOuts: [], warnings: [] });
     return { players: players, rounds: rounds, sig: null, genSig: null, groups: [], settings: { style: DEFAULT_MIXING }, tab: null, name: '' };
   }
   function load() {
@@ -1122,7 +1154,7 @@ function formatRound(round, players) {
     if (!s || !Array.isArray(s.players) || !Array.isArray(s.rounds) || s.rounds.length < MIN_ROUNDS || s.rounds.length > MAX_ROUNDS) return null;
     if (s.players.length > MAX_PLAYERS) return null;
     s.players.forEach(function (p) { p.id = String(p.id || newId()); p.name = String(p.name || ''); p.active = p.active !== false; p.singlesOptOut = !!p.singlesOptOut; p.level = levelInfo(p.level).value; });
-    s.rounds.forEach(function (r, i) { r.number = i + 1; r.locked = !!r.locked; r.edited = !!r.edited; r.courts = r.courts || []; r.sitOuts = r.sitOuts || []; r.warnings = r.warnings || []; });
+    s.rounds.forEach(function (r, i) { r.number = i + 1; r.played = !!r.played; r.locked = !!r.locked || r.played; r.edited = !!r.edited; r.courts = r.courts || []; r.sitOuts = r.sitOuts || []; r.warnings = r.warnings || []; });
     s.name = typeof s.name === 'string' ? s.name.slice(0, 60) : '';
     if (s.sig === undefined) s.sig = null;
     s.genSig = typeof s.genSig === 'string' ? s.genSig : null;
@@ -1282,10 +1314,13 @@ function formatRound(round, players) {
     save(); return true;
   }
 
+  // The group badges only mean something when there is more than one group (Beginner counts as a group).
+  function groupBadges() { var seen = {}, n = 0; S.players.forEach(function (p) { if (named(p) && !seen[p.level]) { seen[p.level] = 1; n++; } }); return n > 1; }
+  function tagHtml(li) { return groupBadges() ? '<span class="tag lv' + li.value + '" title="' + li.label + '">' + li.short + '</span>' : ''; }
   function nameHtml(id) {
     var p = nm(id);
     if (!p) return '<span class="dim">(removed)</span>';
-    var li = levelInfo(p.level), tag = '<span class="tag lv' + li.value + '" title="' + li.label + '">' + li.short + '</span>';
+    var li = levelInfo(p.level), tag = tagHtml(li);
     return '<span class="' + (isOn(p) ? '' : 'dim') + '">' + esc(p.name || '(unnamed)') + '</span>' + tag;
   }
   // In swap mode each player is a button (chip) carrying data-pid; otherwise plain text.
@@ -1302,6 +1337,13 @@ function formatRound(round, players) {
     return '<button type="button" class="seat' + (selId !== null ? ' ready' : '') + '" data-slot="' + c.court + '" data-side="' + side + '" aria-label="Empty seat on court ' + c.court + ': add a player to make it ' + grows + '"><span>+ Add player</span><small>makes ' + grows + '</small></button>';
   }
 
+  // Two paddles touching, the "thanks for the game" gesture: the Played button's icon
+  var PADDLES = '<svg class="padl" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><g transform="translate(3.5 23) rotate(20)"><rect x="-4" y="-18" width="8" height="11" rx="3.6"/><rect x="-1.1" y="-7" width="2.2" height="6" rx=".8" fill="currentColor" stroke="none"/></g><g transform="translate(20.5 23) rotate(-20)"><rect x="-4" y="-18" width="8" height="11" rx="3.6"/><rect x="-1.1" y="-7" width="2.2" height="6" rx=".8" fill="currentColor" stroke="none"/></g></g></svg>';
+  function ico(inner) { return '<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; }
+  var ICO_EDIT = ico('<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>');
+  var ICO_LOCK = ico('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>');
+  var ICO_UNLOCK = ico('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-1.5"/>');
+  var ICO_UNDO = ico('<path d="M9 6L4 11l5 5"/><path d="M4 11h9a5 5 0 0 1 0 10h-3"/>');
   var editRound = null, selId = null, editMsg = ''; // swap mode: which round is being edited, the player picked so far, and a short notice
 
   function renderRounds() {
@@ -1309,10 +1351,13 @@ function formatRound(round, players) {
     S.rounds.forEach(function (r) {
       var has = r.courts.length || r.sitOuts.length;
       var edit = editRound === r.number;
-      html += '<div class="round' + (r.locked ? ' locked' : '') + (edit ? ' editing' : editRound !== null ? ' paused' : '') + '"' + (editRound !== null && !edit ? ' inert' : '') + ' data-round="' + r.number + '">' +
-        '<div class="round-head"><h3>Round ' + r.number + (edit ? '<span class="edit-badge">Editing</span>' : '') + '</h3><div class="round-actions">' +
-        '<button data-action="swapmode"' + (has ? '' : ' disabled') + ' aria-pressed="' + edit + '">' + (edit ? 'Done' : 'Edit') + '</button>' +
-        '<button data-action="lock"' + (has ? '' : ' disabled') + '>' + (r.locked ? '🔒 Locked' : 'Lock') + '</button></div></div>';
+      html += '<div class="round' + (r.played ? ' played' : r.locked ? ' locked' : '') + (edit ? ' editing' : editRound !== null ? ' paused' : '') + '"' + (editRound !== null && !edit ? ' inert' : '') + ' data-round="' + r.number + '">' +
+        '<div class="round-head"><h3>Round ' + r.number + (edit ? '<span class="edit-badge">Editing</span>' : r.played ? '<button type="button" class="played-badge" data-action="unplayed" title="Completed: tap to mark as not completed" aria-label="Completed: tap to mark as not completed">Completed <span class="x" aria-hidden="true">&#10005;</span></button>' : r.locked ? '<span class="locked-badge">Locked</span>' : '') + '</h3><div class="round-actions">' +
+        (r.locked && !edit ? '' : '<button data-action="swapmode"' + (has ? '' : ' disabled') + ' aria-pressed="' + edit + '"' + (edit ? '>Done' : ' class="icon-btn" title="Edit this round" aria-label="Edit this round">' + ICO_EDIT) + '</button>') +
+        (r.played ? '' :
+          '<button data-action="lock" class="icon-btn"' + (has ? '' : ' disabled') + ' title="' + (r.locked ? 'Unlock this round' : 'Lock this round') + '" aria-label="' + (r.locked ? 'Unlock this round' : 'Lock this round') + '">' + (r.locked ? ICO_UNLOCK : ICO_LOCK) + '</button>' +
+          (edit ? '' : '<button data-action="played" class="icon-btn"' + (has ? '' : ' disabled') + ' title="Mark as completed (locks the round)" aria-label="Mark as completed">' + PADDLES + '</button>')) +
+        '</div></div>';
       if (edit) html += '<p class="swap-hint"><b>Tap Done when you have finished.</b> Tap two players to swap them. Singles and 2 v 1 courts have empty seats: move a player onto one to add them to that court.</p>' + (editMsg ? '<p class="edit-msg" role="alert">' + esc(editMsg) + '</p>' : '');
       if (!has) html += '<div class="muted">Not generated yet.</div>';
       r.courts.forEach(function (c) {
@@ -1362,7 +1407,7 @@ function formatRound(round, players) {
       var partners = {}; h.partners.forEach(function (x) { partners[x] = 1; });
       var played = h.rounds.filter(function (x) { return !x.sitOut; }).length;
       var li = levelInfo(p.level);
-      rows += '<tr><td><span class="' + (isOn(p) ? '' : 'dim') + '">' + esc(p.name || '(unnamed)') + '</span><span class="tag lv' + li.value + '" title="' + li.label + '">' + li.short + '</span>' + (isOn(p) ? '' : ' <span class="muted">(inactive)</span>') + '</td>' +
+      rows += '<tr><td><span class="' + (isOn(p) ? '' : 'dim') + '">' + esc(p.name || '(unnamed)') + '</span>' + tagHtml(li) + (isOn(p) ? '' : ' <span class="muted">(inactive)</span>') + '</td>' +
         '<td class="n">' + played + '</td><td class="n">' + (h.singlesMatches + h.soloMatches) + '</td>' +
         (showB ? '<td class="n">' + (isBeg(p) ? '<span class="muted" title="Not counted for beginners">&ndash;</span>' : begGames(p)) + '</td>' : '') +
         '<td class="n">' + Object.keys(partners).length + '</td></tr>';
@@ -1375,7 +1420,7 @@ function formatRound(round, players) {
     document.title = 'Pickleball Session Manager' + (n ? ': ' + n : '') + ' (Groups)';
     document.getElementById('title').classList.toggle('has-name', !!n || document.activeElement === inp);
     if (!typing) inp.value = S.name || '';              // not while the user is typing in it
-    inp.style.width = Math.max(6, (inp.value || '').length + 1) + 'ch';
+    inp.style.width = (inp.value ? Math.max(6, inp.value.length + 1) : 18) + 'ch';
   }
 
   function renderAll() {
@@ -1545,7 +1590,9 @@ function formatRound(round, players) {
       return;
     }
     if (action === 'newsession') {
-      askConfirm('Start a new session? This clears all players, all rounds and the session name.', 'New session', doNewSession);
+      askConfirm('Start a new session? This clears all players, all rounds and the session name.', 'Continue', function () {
+        askName({ title: 'Name the new session', okLabel: 'Start session', canCancel: true, onOk: doNewSession });
+      });
       return;
     }
     if (action === 'add') {
@@ -1574,6 +1621,12 @@ function formatRound(round, players) {
     if (action === 'swapmode') {
       var n2 = +btn.closest('[data-round]').getAttribute('data-round');
       editRound = editRound === n2 ? null : n2; selId = null; editMsg = ''; return renderRounds();
+    }
+    if (action === 'played' || action === 'unplayed') {
+      var pn = +btn.closest('[data-round]').getAttribute('data-round'), pr = S.rounds[pn - 1];
+      if (action === 'played') { pr.lockedBefore = !!pr.locked; pr.played = true; pr.locked = true; }   // remember the lock state to restore
+      else { pr.played = false; pr.locked = !!pr.lockedBefore; delete pr.lockedBefore; }
+      save(); return renderRounds();
     }
     if (action === 'lock') {
       var rn = +btn.closest('[data-round]').getAttribute('data-round');
@@ -1647,7 +1700,7 @@ function formatRound(round, players) {
   });
   function emptyRounds(n) {
     var out = [];
-    for (var i = 1; i <= n; i++) out.push({ number: i, locked: false, edited: false, courts: [], sitOuts: [], warnings: [] });
+    for (var i = 1; i <= n; i++) out.push({ number: i, locked: false, played: false, edited: false, courts: [], sitOuts: [], warnings: [] });
     return out;
   }
   function doClearAll() {
@@ -1658,13 +1711,38 @@ function formatRound(round, players) {
     save(); renderAll();
     showUndo('Cleared all rounds.', function () { S.rounds = snapRounds; S.sig = snapSig; S.genSig = snapGen; });
   }
-  function doNewSession() {
+  function doNewSession(name) {
     clearUndo();
-    S = { players: [], rounds: emptyRounds(S.rounds.length), sig: null, genSig: null, groups: [], settings: { style: S.settings.style === CLUB_STYLE ? DEFAULT_MIXING : S.settings.style }, tab: 'players', name: '' };
+    S = { players: [], rounds: emptyRounds(S.rounds.length), sig: null, genSig: null, groups: [], settings: { style: S.settings.style === CLUB_STYLE ? DEFAULT_MIXING : S.settings.style }, tab: 'players', name: name || '' };
     styleNote = ''; clubNote = '';
     editRound = null; selId = null;
     save(); renderAll(); showTab('players'); toTop();
   }
+  // Session-name prompt (a real dialog: confirm()/prompt() are blocked in embedded pages). The name cannot be blank.
+  var nameCb = null, nameCancelable = true;
+  function defaultSessionName() { try { return new Date().toLocaleDateString(undefined, { weekday: 'long' }); } catch (e) { return ''; } }
+  function askName(o) {
+    nameCb = o.onOk; nameCancelable = !!o.canCancel;
+    document.getElementById('nm-title').textContent = o.title;
+    document.getElementById('nm-ok').textContent = o.okLabel;
+    document.getElementById('nm-cancel').hidden = !o.canCancel;
+    var inp = document.getElementById('nm-input'); inp.value = defaultSessionName(); inp.classList.remove('bad');
+    document.getElementById('name-modal').hidden = false;
+    inp.focus(); inp.select();
+  }
+  function closeName() { nameCb = null; document.getElementById('name-modal').hidden = true; }
+  function submitName() {
+    var inp = document.getElementById('nm-input'), v = inp.value.trim().slice(0, 60);
+    if (!v) { inp.classList.add('bad'); inp.focus(); return; }
+    var cb = nameCb; closeName(); if (cb) cb(v);
+  }
+  document.getElementById('nm-ok').addEventListener('click', submitName);
+  document.getElementById('nm-cancel').addEventListener('click', closeName);
+  document.getElementById('nm-input').addEventListener('input', function (e) { e.target.classList.remove('bad'); });
+  document.getElementById('nm-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitName(); }
+    else if (e.key === 'Escape' && nameCancelable) closeName();
+  });
   document.getElementById('name-edit').addEventListener('click', function () {
     var t = document.getElementById('title');
     t.classList.add('has-name');   // reveal the field first so it can take focus
@@ -1713,6 +1791,7 @@ function formatRound(round, players) {
   }
   renderAll();
   showTab(initialTab());
+  if (firstRun) askName({ title: 'Name your first session', okLabel: 'Start', canCancel: false, onOk: function (n) { S.name = n; save(); renderAll(); } });
 })();
 </script>
 <script>
