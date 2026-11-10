@@ -232,7 +232,7 @@
       <ul>
         <li>Put each player in a group: <b>1</b> is the strongest, then <b>2</b> and <b>3</b>; <b>B</b> is Beginner. Use only the groups you need.</li>
         <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, with the ▲▼ buttons (or, on wide screens, drag the ⋮⋮ handle). A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
-        <li>Tick <b>No singles</b> on a player to keep them off the singles court (including beginners).</li>
+        <li>Tick <b>No singles</b> on a player to keep them off the singles court and from being the lone player in a 2 v 1 (including beginners). If nobody else can fill the spot, the round shows a warning.</li>
         <li>Tap the pencil next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: it clears the players, rounds and name after asking (the number of rounds and session style are kept). This cannot be undone.</li>
         <li>Untick <b>Active</b> for an injury or departure, and tick it again for a late arrival. Then regenerate on the Fixtures tab.</li>
         <li>Players already used in a round can be deactivated but not removed.</li>
@@ -255,7 +255,7 @@
         <li><b>Groups</b>: group players by playing level, not friendship. Very small groups (one or two players) give the app little room to work with. <b>For Social sessions, one group plus Beginners is usually enough</b>: extra groups make only a small difference there, so it is simpler to keep the one group in a rough order. Groups matter most for <b>Competitive</b> sessions, where they keep each court closely matched. Keep the Beginner group in either style, because the beginner rules depend on it.</li>
         <li><b>Ranking</b>: the order within a group is a very rough ranking, strongest at the top. <b>It only needs to be approximate</b>: there is no need to get it perfect, and nobody should read anything into where they sit. It is only a gentle tie-break (for example, it helps decide who is the solo in a 2 v 1) and never overrides the groups or who plays how often. If you are unsure, leave it.</li>
         <li><b>Competitive</b> keeps players mostly with their own group, so games are closely matched. <b>Social</b> mixes neighbouring groups more freely, with a little built-in variety, so stronger and weaker players share a court more often; teams are still balanced (for example strong + weaker v strong + weaker). On small or lopsided rosters, or with few rounds, the two styles can give identical fixtures, and with only one group the style makes no difference.</li>
-        <li><b>Club sheets</b> uses the club's own fixed fixtures for the number of active players, in roster order (slot 1 is the first, strongest player; groups and beginner rules are ignored). It is only for a fresh session of exactly 5 rounds with 6 to 14 players. Once the rounds are generated the style switches to Social straight away (Regenerate rounds stays greyed out), so anything you change afterwards is rebuilt in the Social style around any locked rounds.</li>
+        <li><b>Club sheets</b> uses the club's own fixed fixtures for the number of active players, in roster order (slot 1 is the first, strongest player; groups and beginner rules are ignored, and No singles only produces a warning). It is only for a fresh session of exactly 5 rounds with 6 to 14 players. Once the rounds are generated the style switches to Social straight away (Regenerate rounds stays greyed out), so anything you change afterwards is rebuilt in the Social style around any locked rounds.</li>
         <li><b>Beginners</b> are kept together where possible and the repeat rules are relaxed for them. With two or more beginners, two of them play each other on the singles court in the first round and again around the middle of the session; with no singles court but a 2 v 1, two beginners are the pair in it. The app avoids putting the same strong players with beginners more than once, most of all the higher ranked Group 1 players. The Session summary shows a <b>B games</b> column (games played with a beginner on the court) when beginners are playing.</li>
         <li><b>Hand edits</b>: an edited round is locked, so Regenerate leaves it alone and rebuilds the other rounds around it.</li>
       </ul>
@@ -396,6 +396,8 @@ const W = {
                       // splits of equal level balance: the best and weakest of a group pair up against the middle two)
   soloRank: 40,       // 2v1: per level point (including the within-group rank fraction) by which the solo player is weaker
                       // than the strongest of the three, so the higher ranked of two same-group players is the solo
+  soloOptOut: 2000,   // 2v1: a player who ticked No singles is the solo (plays alone). Outweighs every other solo preference, but is not
+                      // forbidden: when all three have opted out someone has to be the solo, and the round gets a warning
   beginnerStrong: 40, // a strong player (Group 1 most, higher ranked more) on a court with a beginner pays this x games already
                       // played with beginners x a strength weight, so the same strong players are not paired with beginners again and again
   strengthBias: 1,    // 1 = on, 0 = off. Tie-breaks only (fairness counts are never touched): among equally fair
@@ -619,7 +621,8 @@ function bestCourt(g, hist, params, levelOf) {
     const bestFine = Math.min(...g.map((id) => L(id) + R(id)));
     opts = g.map((solo, i) => {
       const gap = L(solo) - best;
-      return { a: [solo], b: g.filter((_, j) => j !== i), cost: W.soloSwap * gap + W.soloRank * (L(solo) + R(solo) - bestFine), flag: gap > 0 ? 'soloSwap' : null };
+      const noSolo = params.optOutOf?.has(solo);   // opted out of singles: should not be the lone player
+      return { a: [solo], b: g.filter((_, j) => j !== i), cost: W.soloSwap * gap + W.soloRank * (L(solo) + R(solo) - bestFine) + (noSolo ? W.soloOptOut : 0), flag: noSolo ? 'soloOptOut' : gap > 0 ? 'soloSwap' : null };
     });
   }
   // Courts of only beginners get relaxed variety rules: they may play together back-to-back and repeat
@@ -801,9 +804,11 @@ function clubSheetRound(players, roundNumber, totalRounds) {
   const id = (slot) => active[slot - 1].id;
   const courts = sheet.map(([court, t, a, b]) => ({ court, type: CLUB_TYPES[t], teamA: a.map(id), teamB: b.map(id) }));
   const warnings = [];
-  for (const c of courts) if (c.type === 'singles') {
-    const bad = [...c.teamA, ...c.teamB].map((x) => active.find((p) => p.id === x)).filter((p) => p.singlesOptOut);
-    if (bad.length) warnings.push(`${bad.map((p) => p.name).join(' and ')} opted out of singles but ${bad.length > 1 ? 'are' : 'is'} on the singles court.`);
+  for (const c of courts) if (c.type === 'singles' || c.type === '2v1') {
+    const lone = c.type === 'singles' ? [...c.teamA, ...c.teamB] : c.teamA;   // the players who play alone
+    const bad = lone.map((x) => active.find((p) => p.id === x)).filter((p) => p.singlesOptOut);
+    if (bad.length) warnings.push(c.type === 'singles' ? `${bad.map((p) => p.name).join(' and ')} opted out of singles but ${bad.length > 1 ? 'are' : 'is'} on the singles court.`
+      : `${bad[0].name} opted out of singles but is the solo player in the 2 v 1 on court ${c.court}.`);
   }
   return { number: roundNumber, locked: false, courts, sitOuts: [], warnings };
 }
@@ -834,6 +839,7 @@ function generateRound(players, priorRounds, roundNumber, opts = {}) {
     beginnerSingles: opts.beginnerSingles ?? W.beginnerSingles,
     begOf: new Set(players.filter((p) => levelInfo(p.level).beginner).map((p) => p.id)),
     rankOf: rankOffsets(players),
+    optOutOf: new Set(players.filter((p) => p.active && p.singlesOptOut).map((p) => p.id)),
     round: roundNumber,
     beginnerStrong: opts.beginnerStrong ?? W.beginnerStrong,
   };
@@ -892,8 +898,10 @@ function generateRound(players, priorRounds, roundNumber, opts = {}) {
     const rest = pool.filter((q) => !pairIds.has(q.id));
     const rank = (q) => params.rankOf.get(q.id) ?? 0;
     const soloOrder = [...rest.filter((q) => !params.begOf.has(q.id)), ...rest.filter((q) => params.begOf.has(q.id))]
-      .sort((a, b) => (params.begOf.has(a.id) - params.begOf.has(b.id)) || (levelOf.get(b.id) - levelOf.get(a.id)) || (rank(b) - rank(a)));
-    const solo = soloOrder.find((q) => !hist.matchKeys.has(matchKey({ teamA: [q.id], teamB: pair.map((x) => x.id) }))) || soloOrder[0];
+      .sort((a, b) => (params.begOf.has(a.id) - params.begOf.has(b.id)) || (params.optOutOf.has(a.id) - params.optOutOf.has(b.id)) || (levelOf.get(b.id) - levelOf.get(a.id)) || (rank(b) - rank(a)));
+    const fresh = (q) => !hist.matchKeys.has(matchKey({ teamA: [q.id], teamB: pair.map((x) => x.id) }));
+    // never an opted-out player if anyone else can do it; avoid repeating an identical match where possible
+    const solo = soloOrder.find((q) => !params.optOutOf.has(q.id) && fresh(q)) || soloOrder.find((q) => !params.optOutOf.has(q.id)) || soloOrder.find(fresh) || soloOrder[0];
     if (solo) {
       forced = { court: layout.d + 1, type: '2v1', teamA: [solo.id], teamB: pair.map((x) => x.id) };
       const used = new Set([solo.id, ...pairIds]);
@@ -917,6 +925,7 @@ function generateRound(players, priorRounds, roundNumber, opts = {}) {
       const names = g.combo.map((q) => remaining[q].name).join(', ');
       if (c.identical && !c.allBeg) warnings.push(`Court ${i + 1} (${names}) repeats an earlier identical match; no alternative was available.`);
       if (c.flag === 'uneven') warnings.push(`Court ${i + 1} (${names}): the teams are uneven in level, to avoid a repeat.`);
+      if (c.flag === 'soloOptOut') warnings.push(`Court ${i + 1} (${names}): everyone here opted out of singles, so one of them is the solo player.`);
       if (c.flag === 'soloSwap') warnings.push(`Court ${i + 1} (${names}): the strongest player is not solo, to avoid a repeat.`);
     });
   }
@@ -989,6 +998,10 @@ function refreshWarnings(session, r) {
       if (bad.length) warnings.push(`${bad.map((p) => p.name).join(' and ')} opted out of singles but ${bad.length > 1 ? 'are' : 'is'} on the singles court.`);
       continue;
     }
+    if (c.type === '2v1') {
+      const solo = byId.get(c.teamA[0]);
+      if (solo && solo.singlesOptOut) warnings.push(`${solo.name} opted out of singles but is the solo player in the 2 v 1 on court ${c.court}.`);
+    }
     if ([...c.teamA, ...c.teamB].every((id) => byId.get(id) && levelInfo(byId.get(id).level).beginner)) continue; // beginners may repeat
     const key = matchKey(c);
     const other = session.rounds.find((x) => x !== r && x.courts.some((y) => y.type !== 'singles' && matchKey(y) === key));
@@ -1052,6 +1065,8 @@ function validateSession(session) {
     for (const c of r.courts) {
       if (c.type === 'singles' && [...c.teamA, ...c.teamB].some((id) => byId.get(id)?.singlesOptOut))
         issues.push(`Round ${r.number}: singles opt-out player on singles court`);
+      if (c.type === '2v1' && byId.get(c.teamA[0])?.singlesOptOut && !c.teamB.concat(c.teamA).every((id) => byId.get(id)?.singlesOptOut))
+        issues.push(`Round ${r.number}: singles opt-out player is the solo in a 2v1 although someone else could be`);
       if (c.type !== 'singles' && !(c.type === 'doubles' || c.type === '2v1' ? [...c.teamA, ...c.teamB].every((id) => byId.get(id) && levelInfo(byId.get(id).level).beginner) : false)) {
         const key = matchKey(c);
         if (seenMatches.has(key)) issues.push(`Round ${r.number} court ${c.court}: identical to round ${seenMatches.get(key)}`);
