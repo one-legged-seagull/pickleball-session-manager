@@ -1082,7 +1082,9 @@ function formatRound(round, players) {
   function newId() { return 'p' + Math.random().toString(36).slice(2, 9); }
   function fresh() {
     var players = [];
-    for (var i = 1; i <= MAX_PLAYERS; i++) players.push({ id: newId(), name: 'Player ' + i, level: i <= 5 ? 1 : i <= 10 ? 2 : 3, active: true, singlesOptOut: false });
+    // A real first visit starts with an empty roster. Adding ?demo to the address gives 14 sample players (for trying it out).
+    var demo = /[?&]demo(=|&|$)/.test(location.search);
+    for (var i = 1; demo && i <= MAX_PLAYERS; i++) players.push({ id: newId(), name: 'Player ' + i, level: i <= 5 ? 1 : i <= 10 ? 2 : 3, active: true, singlesOptOut: false });
     var rounds = [];
     for (var r = 1; r <= DEFAULT_ROUNDS; r++) rounds.push({ number: r, locked: false, courts: [], sitOuts: [], warnings: [] });
     return { players: players, rounds: rounds, sig: null, genSig: null, groups: [], settings: { style: DEFAULT_MIXING }, tab: null, name: '' };
