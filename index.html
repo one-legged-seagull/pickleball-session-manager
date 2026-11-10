@@ -42,6 +42,14 @@
   header { padding: 12px clamp(10px, 3vw, 16px) 6px; background: var(--card); }
   header h1 { margin: 0; font-size: 18px; }
   header h1 .logo { vertical-align: -7px; margin-right: 8px; }
+  /* When the title and the session name do not fit on one line, the title text is dropped and only the paddle icon is
+     kept (decided by measuring in fitTitle(), not by a fixed screen width; the title stays available to screen readers) */
+  header h1.compact { display: flex; align-items: center; gap: 4px; }
+  header h1.compact .ttl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  header h1.compact .logo { flex: none; margin-right: 4px; }
+  header h1.compact .name-wrap { margin: 0 !important; flex: 1 1 0; min-width: 0; }
+  header h1.compact .name-wrap .colon { display: none; }
+  header h1.compact #session-name { width: 100% !important; min-width: 0; }
   header { position: relative; }
   .head-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   .info-btn { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; margin: -6px -8px -6px 0; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
@@ -1421,7 +1429,20 @@ function formatRound(round, players) {
     document.getElementById('title').classList.toggle('has-name', !!n || document.activeElement === inp);
     if (!typing) inp.value = S.name || '';              // not while the user is typing in it
     inp.style.width = (inp.value ? Math.max(6, inp.value.length + 1) : 18) + 'ch';
+    fitTitle();
   }
+  // Drop the title text (keep the paddle icon) only when title + session name would not fit on one line.
+  function fitTitle() {
+    var h = document.getElementById('title'), t = h.querySelector('.ttl'), w = h.querySelector('.name-wrap');
+    h.classList.remove('compact');                       // measure the full layout first (no paint happens in between)
+    var tr = t.getBoundingClientRect(), wr = w.getBoundingClientRect(), hr = h.getBoundingClientRect();
+    if (!tr.height) return;                              // not laid out yet
+    var line = parseFloat(getComputedStyle(t).fontSize) * 1.6;
+    if (tr.height > line || wr.top >= tr.bottom - 2 || wr.right > hr.right + 1) h.classList.add('compact');
+  }
+  window.addEventListener('resize', fitTitle);
+  if (window.ResizeObserver) new ResizeObserver(fitTitle).observe(document.querySelector('.head-row'));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 
   function renderAll() {
     renderTitle();
