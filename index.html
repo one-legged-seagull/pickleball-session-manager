@@ -1683,6 +1683,10 @@ function formatRound(round, players) {
     if (document.activeElement.id !== 'session-name') t.classList.remove('has-name');
   });
   document.getElementById('session-name').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
+  // Enter in a player's name field leaves it, so the on-screen keyboard goes away
+  document.getElementById('roster').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('nm')) { e.preventDefault(); e.target.blur(); }
+  });
   document.getElementById('session-name').addEventListener('blur', function () { renderTitle(true); });
   document.getElementById('session-name').addEventListener('input', function (e) {
     clearUndo(); hideConfirm();
