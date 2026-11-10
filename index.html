@@ -136,15 +136,17 @@
   .grp-sec.empty .grp-head button { min-height: 32px; }
   /* Ranking: the ▲▼ buttons, and a drag handle on the left (only the handle captures touch, so scrolling elsewhere is never a drag) */
   .roster-row.drag { opacity: .45; }
-  .roster-row.over { outline: 2px solid var(--accent); border-radius: 6px; }
+  .roster-row.over { outline: 2px solid var(--accent); }
   .roster-row .grip { grid-area: grip; min-width: 32px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 20px; color: var(--muted); }
   .roster-row .sub { display: contents; }
   .roster-row .mv { grid-area: mv; display: inline-flex; gap: 4px; }
   .roster-row .mv.none { visibility: hidden; }
-  .roster-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; grid-template-areas: "grip nm lvl opts mv rm"; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  /* Each player is a card; its left stripe takes the colour of the group it is in (drag it to another group to change group) */
+  .roster-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: "grip nm opts mv rm"; gap: 8px; align-items: center; margin-top: 8px; padding: 6px 10px 6px 2px; background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, .07); }
+  .grp-sec[data-level="1"] .roster-row { border-left-color: var(--g1-fg); } .grp-sec[data-level="2"] .roster-row { border-left-color: var(--g2-fg); }
+  .grp-sec[data-level="3"] .roster-row { border-left-color: var(--g3-fg); } .grp-sec[data-level="4"] .roster-row { border-left-color: var(--gb-fg); }
+  .grp-sec.over-sec { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
   .roster-row.inactive input[type=text] { opacity: .5; }
-  .roster-row .lvl { grid-area: lvl; }
-  .roster-row.inactive .lvl { opacity: .5; }
   .roster-row .nm { grid-area: nm; }
   .roster-row .opts { grid-area: opts; display: flex; gap: 4px 14px; flex-wrap: wrap; }
   .roster-row .rm { grid-area: rm; }
@@ -159,7 +161,7 @@
   .panel { display: grid; gap: clamp(10px, 2.5vw, 16px); }
   .panel[hidden] { display: none; }
   @container roster (max-width: 600px) {
-    .roster-row { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "grip nm lvl rm" "grip sub sub sub"; row-gap: 0; padding: 8px 0; column-gap: 6px; }
+    .roster-row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "grip nm rm" "grip sub sub"; row-gap: 0; padding: 8px 8px 8px 0; column-gap: 6px; }
     .roster-row .grip { min-width: 36px; }
     .roster-row .sub { grid-area: sub; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   }
@@ -168,7 +170,6 @@
     .roster-row { column-gap: 4px; }
     .roster-row .grip { min-width: 30px; }
     .roster-row .mv { display: none; }
-    .roster-row select.lvl { padding-left: 6px; padding-right: 2px; }
     .roster-row .rm button { min-width: 40px; padding-left: 8px; padding-right: 8px; }
   }
   .rounds { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
@@ -208,10 +209,6 @@
   .tag.lv3 { background: var(--g3-bg); color: var(--g3-fg); } .tag.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
   .tag { font-weight: 600; }
   #summary td:first-child { white-space: nowrap; }
-  /* Group dropdowns use the same colours as the badges on the court cards */
-  select.lvl { font-weight: 600; }
-  select.lvl.lv1, option.lv1 { background: var(--g1-bg); color: var(--g1-fg); } select.lvl.lv2, option.lv2 { background: var(--g2-bg); color: var(--g2-fg); }
-  select.lvl.lv3, option.lv3 { background: var(--g3-bg); color: var(--g3-fg); } select.lvl.lv4, option.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
   .tag { font-size: 11px; color: var(--muted); background: var(--chip); border-radius: 10px; padding: 0 6px; margin-left: 4px; font-variant-numeric: tabular-nums; }
   .sub { font-size: 11px; color: var(--muted); }
   .dim { opacity: .55; text-decoration: line-through; }
@@ -270,7 +267,7 @@
       <h2>Players</h2>
       <ul>
         <li>Put each player in a group: <b>1</b> is the strongest, then <b>2</b> and <b>3</b>; <b>B</b> is Beginner. Use only the groups you need.</li>
-        <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, by dragging the ⋮⋮ handle on the left of a row, or with the ▲▼ buttons. A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
+        <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Each player is a card. Rank players within their group, strongest at the top, by dragging the ⋮⋮ handle on the left of a card, or with the ▲▼ buttons. To change a player's group, drag the card onto a player in another group (it joins just before them) or onto the group itself (it joins at the bottom). ▲ on the top player of a group moves them to the bottom of the group above, and ▼ on the bottom player moves them to the top of the group below. A new player starts at the bottom of their group.</li>
         <li>Tick <b>No singles</b> on a player to keep them off the singles court and from being the lone player in a 2 v 1 (including beginners). If nobody else can fill the spot, the round shows a warning.</li>
         <li>Tap <i>Edit session name</i> next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: after you confirm, it asks for a name (it suggests today's day, such as "Thursday") and then clears the players and rounds (the number of rounds and session style are kept). This cannot be undone.</li>
         <li>Untick <b>Active</b> for an injury or departure, and tick it again for a late arrival. Then regenerate on the Fixtures tab.</li>
@@ -1276,14 +1273,29 @@ function formatRound(round, players) {
   function nextHiddenGroup() { return LEVELS.filter(function (l) { return !groupShown(l); })[0] || null; }
   function rosterOrder() { var out = []; LEVELS.forEach(function (l) { out.push.apply(out, groupMembers(l.value)); }); return out; }
 
+  // The nearest group shown above (dir -1) or below (dir +1) the given one, or null.
+  function neighbourGroup(level, dir) {
+    var shown = LEVELS.filter(groupShown), at = shown.findIndex(function (l) { return l.value === level; });
+    return at < 0 ? null : (shown[at + dir] || null);
+  }
+  // Put a player in a group: before the player `beforeId`, or at the end (weakest) when beforeId is null.
+  function placeAt(id, level, beforeId) {
+    var p = nm(id); if (!p) return false;
+    S.players.splice(S.players.indexOf(p), 1);
+    p.level = levelInfo(level).value;
+    var bi = beforeId ? S.players.findIndex(function (x) { return x.id === beforeId; }) : -1;
+    if (bi >= 0) S.players.splice(bi, 0, p); else S.players.push(p);
+    save(); return true;
+  }
+
   function rowHtml(p, i, n) {
     var nmTxt = esc(p.name || 'player');
-    var mv = n > 1 ? '<div class="mv"><button type="button" class="icon" data-action="ordup" aria-label="Move ' + nmTxt + ' up in ranking"' + (i === 0 ? ' disabled' : '') + '>&#9650;</button>' +
-      '<button type="button" class="icon" data-action="orddown" aria-label="Move ' + nmTxt + ' down in ranking"' + (i === n - 1 ? ' disabled' : '') + '>&#9660;</button></div>' : '';
+    var canUp = i > 0 || !!neighbourGroup(p.level, -1), canDown = i < n - 1 || !!neighbourGroup(p.level, 1);
+    var mv = '<div class="mv"><button type="button" class="icon" data-action="ordup" aria-label="Move ' + nmTxt + ' up (into the group above from the top of a group)" title="Move up"' + (canUp ? '' : ' disabled') + '>&#9650;</button>' +
+      '<button type="button" class="icon" data-action="orddown" aria-label="Move ' + nmTxt + ' down (into the group below from the bottom of a group)" title="Move down"' + (canDown ? '' : ' disabled') + '>&#9660;</button></div>';
     return '<div class="roster-row' + (isOn(p) ? '' : ' inactive') + (named(p) ? '' : ' unnamed') + '" data-id="' + p.id + '">' +
-      (n > 1 ? '<span class="grip" title="Drag to rank" aria-hidden="true">&#8942;&#8942;</span>' : '<span class="grip" style="visibility:hidden" aria-hidden="true">&#8942;&#8942;</span>') +
+      '<span class="grip" title="Drag to rank, or to another group" aria-hidden="true">&#8942;&#8942;</span>' +
       '<input type="text" class="nm" data-field="name" value="' + esc(p.name) + '" placeholder="Player name" aria-label="Player name" maxlength="40" autocomplete="off" autocapitalize="words" enterkeyhint="done">' +
-      '<select class="lvl lv' + p.level + '" data-field="level" aria-label="Group">' + LEVELS.filter(function (l) { return groupShown(l) || l.value === p.level; }).map(function (l) { return '<option class="lv' + l.value + '" value="' + l.value + '"' + (l.value === p.level ? ' selected' : '') + '>' + l.label + '</option>'; }).join('') + '</select>' +
       '<div class="sub"><div class="opts"><label><input type="checkbox" data-field="active"' + (isOn(p) ? ' checked' : '') + (named(p) ? '' : ' disabled') + '> Active</label> ' +
       '<label><input type="checkbox" data-field="singlesOptOut"' + (p.singlesOptOut ? ' checked' : '') + '> No singles</label></div>' + mv + '</div>' +
       '<div class="rm"><button class="icon danger" data-action="remove" aria-label="Remove"' + (used(p.id) ? ' disabled title="Used in a round: deactivate instead"' : '') + '>&times;</button></div>' +
@@ -1526,19 +1538,29 @@ function formatRound(round, players) {
     if (el) el.focus({ preventScroll: true });
   }
 
-  // Drag to rank (all layouts): grab a row's handle and drop it on another row of the same group. A drop on a
-  // row in a different group is ignored, because ranks are only compared within a group.
+  // Drag by the handle (all layouts): drop on a player to take their place (in another group, to join that group just
+  // before them), or on a group's header, empty space or empty section to join it as its weakest player.
   (function () {
     var d = null;
     function rowAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.roster-row') : null; }
-    function sameGroup(row) { return row && row.closest('.grp-sec') === d.sec; }
-    function clearOver() { document.querySelectorAll('.roster-row.over').forEach(function (n) { n.classList.remove('over'); }); }
+    function secAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.grp-sec') : null; }
+    function clearOver() {
+      document.querySelectorAll('.roster-row.over').forEach(function (n) { n.classList.remove('over'); });
+      document.querySelectorAll('.grp-sec.over-sec').forEach(function (n) { n.classList.remove('over-sec'); });
+    }
     var raf = 0;
     function end() { if (!d) return; if (d.ghost) d.ghost.remove(); d.row.classList.remove('drag'); clearOver(); document.body.classList.remove('dragging'); cancelAnimationFrame(raf); d = null; }
+    // What a drop here would do: { row } (on a player), { sec } (on a group but not on a player), or null.
+    function targetAt(x, y) {
+      var t = rowAt(x, y);
+      if (t) return t === d.row ? null : { row: t };
+      var sec = secAt(x, y);
+      return sec && sec !== d.sec ? { sec: sec } : null;
+    }
     function mark() {
       clearOver();
-      var t = rowAt(d.cx, d.cy);
-      if (t && t !== d.row && sameGroup(t)) t.classList.add('over');
+      var t = targetAt(d.cx, d.cy);
+      if (t && t.row) t.row.classList.add('over'); else if (t && t.sec) t.sec.classList.add('over-sec');
     }
     // Long groups can be taller than the screen: hold the finger near the top or bottom edge to scroll.
     function autoScroll() {
@@ -1567,12 +1589,19 @@ function formatRound(round, players) {
     });
     document.addEventListener('pointerup', function (e) {
       if (!d || e.pointerId !== d.pid) return;
-      var moved = !!d.ghost, from = d, t = moved ? rowAt(e.clientX, e.clientY) : null;
+      var from = d, moved = !!d.ghost;
+      if (moved) { d.cx = e.clientX; d.cy = e.clientY; }
+      var t = moved ? targetAt(e.clientX, e.clientY) : null;
       end();
-      if (!moved || !t || t === from.row || t.closest('.grp-sec') !== from.sec) return;
-      var p = nm(from.id), m = groupMembers(p.level), tid = t.getAttribute('data-id');
-      moveInGroup(from.id, m.findIndex(function (x) { return x.id === tid; }));
-      renderRoster();
+      if (!t) return;
+      var p = nm(from.id); if (!p) return;
+      if (t.row) {
+        var tid = t.row.getAttribute('data-id'), tp = nm(tid);
+        if (!tp) return;
+        if (tp.level === p.level) { var m = groupMembers(p.level); moveInGroup(from.id, m.findIndex(function (x) { return x.id === tid; })); }
+        else placeAt(from.id, tp.level, tid);
+      } else placeAt(from.id, +t.sec.getAttribute('data-level'), null);
+      renderAll();
     });
     document.addEventListener('pointercancel', end);
   })();
@@ -1633,8 +1662,13 @@ function formatRound(round, players) {
     }
     if (action === 'ordup' || action === 'orddown') {
       var oid = btn.closest('[data-id]').getAttribute('data-id'), op = nm(oid);
-      if (op) { var om = groupMembers(op.level); moveInGroup(oid, om.indexOf(op) + (action === 'ordup' ? -1 : 1)); }
-      renderRoster();
+      if (op) {
+        var om = groupMembers(op.level), oi = om.indexOf(op), up = action === 'ordup';
+        if (up && oi === 0) { var ng1 = neighbourGroup(op.level, -1); if (ng1) placeAt(oid, ng1.value, null); }              // top of a group: join the end of the group above
+        else if (!up && oi === om.length - 1) { var ng2 = neighbourGroup(op.level, 1); if (ng2) { var gm = groupMembers(ng2.value); placeAt(oid, ng2.value, gm.length ? gm[0].id : null); } }   // bottom: join the top of the group below
+        else moveInGroup(oid, oi + (up ? -1 : 1));
+      }
+      renderAll();
       var again = document.querySelector('#roster [data-id="' + oid + '"] [data-action="' + action + '"]:not(:disabled)') || document.querySelector('#roster [data-id="' + oid + '"] [data-action]:not(:disabled)');
       if (again) again.focus({ preventScroll: true });
       return;
@@ -1672,13 +1706,10 @@ function formatRound(round, players) {
   document.addEventListener('change', function (e) {
     var el = e.target, field = el.getAttribute('data-field');
     if (field) clearUndo();
-    if (field !== 'active' && field !== 'singlesOptOut' && field !== 'level') return;
+    if (field !== 'active' && field !== 'singlesOptOut') return;
     var p = nm(el.closest('[data-id]').getAttribute('data-id'));
     if (!p) return;
-    if (field === 'level') {
-      var nl = levelInfo(+el.value).value;
-      if (nl !== p.level) { p.level = nl; S.players.splice(S.players.indexOf(p), 1); S.players.push(p); }   // joins the new group as its weakest
-    } else p[field] = el.checked;
+    p[field] = el.checked;
     save(); renderAll();
   });
 
