@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Pickleball Session Manager (Groups)</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #6a737d; --line: #dde1e6;
+    --accent: #1f7a4d; --accent-text: #ffffff; --warn-bg: #fff4d6; --warn-text: #6b4e00;
+    --danger: #b3261e; --lock: #2b5fb4; --chip: #eef1f4; --lock-bg: #e3e6ea;
+    --g1-bg: #cfe0ff; --g1-fg: #17356e; --g2-bg: #ffd9b3; --g2-fg: #6e2c00;
+    --g3-bg: #fbe98a; --g3-fg: #574400; --gb-bg: #c6eed3; --gb-fg: #0f4a28;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171a; --card: #1e2227; --text: #e8eaed; --muted: #9aa3ad; --line: #333a42;
+      --accent: #3fae7a; --accent-text: #0b1d14; --warn-bg: #3a3014; --warn-text: #f1d98a;
+      --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c;
+      --g1-bg: #1f3d6b; --g1-fg: #c4dbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
+      --g3-bg: #54470d; --g3-fg: #f6e68c; --gb-bg: #1b4a30; --gb-fg: #b9edcb;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171a; --card: #1e2227; --text: #e8eaed; --muted: #9aa3ad; --line: #333a42;
+    --accent: #3fae7a; --accent-text: #0b1d14; --warn-bg: #3a3014; --warn-text: #f1d98a;
+    --danger: #f2877f; --lock: #7fa9ec; --chip: #2a3036; --lock-bg: #2f353c;
+    --g1-bg: #1f3d6b; --g1-fg: #c4dbff; --g2-bg: #623612; --g2-fg: #ffd3a8;
+    --g3-bg: #54470d; --g3-fg: #f6e68c; --gb-bg: #1b4a30; --gb-fg: #b9edcb;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; color-scheme: light dark; }
+  /* Safe-area insets: foldable/notched phones keep system controls at the sides (iPhone Duo included),
+     and the viewport can change width mid-session when the device is folded or unfolded. */
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text);
+    -webkit-tap-highlight-color: transparent; overflow-wrap: break-word;
+  }
+  header { padding: 12px clamp(10px, 3vw, 16px) 6px; background: var(--card); }
+  header h1 { margin: 0; font-size: 18px; }
+  header h1 .logo { vertical-align: -7px; margin-right: 8px; }
+  header { position: relative; }
+  .head-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .info-btn { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; margin: -6px -8px -6px 0; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
+  .info-btn span { width: 26px; height: 26px; border: 2px solid var(--muted); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: italic 700 15px Georgia, serif; color: var(--muted); }
+  .info-btn[aria-expanded="true"] span { border-color: var(--accent); color: var(--accent); }
+  #info-pop { position: absolute; right: clamp(6px, 2vw, 12px); top: calc(100% - 2px); z-index: 20; width: min(440px, calc(100vw - 16px)); max-height: min(70vh, 560px); overflow: auto; padding: 4px 14px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.22); font-size: 14px; }
+  #info-pop[hidden], #info-pop [hidden] { display: none; }
+  #info-pop h2 { font-size: 15px; margin: 10px 0 4px; }
+  #info-how { border-top: 1px solid var(--line); margin-top: 12px; }
+  #info-pop ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+  .info-foot { margin: 10px 0 0; }
+  .info-close { margin-top: 8px; width: 100%; }
+  main { max-width: 1100px; margin: 0 auto; padding: clamp(10px, 3vw, 16px); display: grid; gap: clamp(10px, 2.5vw, 16px); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: clamp(10px, 2.5vw, 14px); min-width: 0; }
+  h2 { margin: 0 0 10px; font-size: 16px; }
+  button { font: inherit; padding: 8px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; touch-action: manipulation; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button.icon { padding: 4px; min-width: 44px; line-height: 1; font-size: 18px; }
+  /* 16px minimum stops iOS Safari zooming the page when a field is focused */
+  input[type=text] { font: inherit; font-size: 16px; padding: 8px 10px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); min-width: 0; width: 100%; }
+  input[type=checkbox] { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); flex: none; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toolbar .primary { flex: 1 1 160px; }
+  .setup { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+  .field { display: flex; flex-direction: column; align-items: stretch; gap: 2px; flex: 1 1 140px; min-width: 0; }
+  .field label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .field select { flex: none; width: 100%; }
+  select { font: inherit; font-size: 16px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); max-width: 100%; flex: 1 1 100px; min-width: 0; }
+  /* Collapsible section (Session summary) */
+  summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; touch-action: manipulation; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "\25B8"; color: var(--muted); width: 1em; flex: none; }
+  details[open] > summary::before { content: "\25BE"; }
+  summary h2 { margin: 0; }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .spacer { flex: 1; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .banner.undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .banner.undo[hidden] { display: none; }
+  #notices { display: contents; }
+  header h1 { overflow-wrap: anywhere; }
+  .head-row h1 { flex: 1 1 auto; min-width: 0; }
+  .new-btn { flex: none; min-height: 40px; padding: 4px 10px; font-size: 14px; color: var(--danger); border-color: var(--line); white-space: nowrap; }
+  .new-btn .long { display: none; }
+  @media (min-width: 560px) { .new-btn .long { display: inline; } }
+  @media (max-width: 559.98px) { #roster-count .rc-extra { display: none; } }
+  /* Session name, edited in place inside the title */
+  .roster-row.unnamed input.nm { border-color: var(--danger); }
+  .roster-row.unnamed .opts label:first-child { opacity: .5; }
+  .name-wrap, .name-edit { display: none; }
+  h1.has-name .name-wrap { display: inline-flex; align-items: baseline; gap: 4px; max-width: 100%; }
+  h1:not(.has-name) .name-edit { display: inline-flex; }
+  header #session-name { font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; border-bottom: 1px dashed var(--muted); border-radius: 0; padding: 0 2px; min-height: 0; width: 8ch; max-width: 100%; min-width: 6ch; }
+  header #session-name:focus { outline: none; border-bottom: 2px solid var(--accent); }
+  header #session-name::placeholder { font-weight: 500; color: var(--muted); }
+  .name-edit { vertical-align: middle; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; margin-left: 2px; border: 0; background: transparent; color: var(--muted); font-size: 16px; }
+  .confirm-btns { display: inline-flex; gap: 6px; flex: none; }
+  .banner { padding: 8px 10px; border-radius: 7px; background: var(--warn-bg); color: var(--warn-text); margin: 8px 0; font-size: 13px; }
+  /* Roster responds to ITS OWN width (container query), not the screen's: it stays correct in
+     split-view windows and when a foldable changes size, with no fixed device breakpoints. */
+  #roster-section { container-type: inline-size; container-name: roster; }
+  /* Roster sections, one per group (the order within a group is an implicit ranking: strongest first) */
+  .grp-sec { margin-top: 10px; }
+  .grp-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; }
+  .grp-head h3 { margin: 0; font-size: 15px; }
+  .grp-head .cnt { font-size: 13px; opacity: .8; }
+  .grp-head .spacer { flex: 1; }
+  .grp-head button { min-height: 36px; padding: 4px 10px; font-size: 14px; }
+  .grp-head.lv1 { background: var(--g1-bg); color: var(--g1-fg); } .grp-head.lv2 { background: var(--g2-bg); color: var(--g2-fg); }
+  .grp-head.lv3 { background: var(--g3-bg); color: var(--g3-fg); } .grp-head.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
+  .grp-sec.empty .grp-head { opacity: .75; padding: 2px 10px; }
+  .grp-sec.empty .grp-head button { min-height: 32px; }
+  /* Ranking: arrows always; drag handle on wide layouts */
+  .roster-row.drag { opacity: .45; }
+  .roster-row.over { outline: 2px solid var(--accent); border-radius: 6px; }
+  .roster-row .grip { grid-area: grip; min-width: 32px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 20px; color: var(--muted); }
+  .roster-row .sub { display: contents; }
+  .roster-row .mv { grid-area: mv; display: inline-flex; gap: 4px; }
+  .roster-row .mv.none { visibility: hidden; }
+  .roster-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; grid-template-areas: "grip nm lvl opts mv rm"; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .roster-row.inactive input[type=text] { opacity: .5; }
+  .roster-row .lvl { grid-area: lvl; }
+  .roster-row.inactive .lvl { opacity: .5; }
+  .roster-row .nm { grid-area: nm; }
+  .roster-row .opts { grid-area: opts; display: flex; gap: 4px 14px; flex-wrap: wrap; }
+  .roster-row .rm { grid-area: rm; }
+  .roster-row label { display: inline-flex; gap: 6px; align-items: center; min-height: 44px; font-size: 14px; white-space: nowrap; }
+  /* Two top-level tabs: Players (setup, rarely touched once a session starts) and Fixtures (what people use). */
+  .tabbar { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 clamp(10px, 3vw, 16px); }
+  .tabs { display: flex; gap: 6px; max-width: 1100px; margin: 0 auto; }
+  .tabs button { flex: 1 1 0; min-height: 48px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; color: var(--muted); font-size: 16px; font-weight: 600; }
+  .tabs button:hover:not(:disabled) { color: var(--text); }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .panel { display: grid; gap: clamp(10px, 2.5vw, 16px); }
+  .panel[hidden] { display: none; }
+  @container roster (max-width: 600px) {
+    .roster-row { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "nm lvl rm" "sub sub sub"; row-gap: 0; padding: 8px 0; }
+    .roster-row .grip { display: none; }
+    .roster-row .sub { grid-area: sub; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  }
+  .rounds { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
+  .round { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--card); }
+  .round.locked { border-color: var(--lock); background: var(--lock-bg); }
+  /* Edit mode is modal: the round being edited is highlighted and everything else is dimmed and inert. */
+  .round.editing { border: 2px solid var(--accent); background: var(--chip); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); padding: 11px; }
+  .round.editing .court { background: var(--card); }
+  .round.paused, .dim-edit { opacity: .4; pointer-events: none; user-select: none; -webkit-user-select: none; }
+  .edit-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 12px; font-weight: 600; vertical-align: 2px; }
+  .round.editing [data-action="swapmode"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  .round-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .round-head h3 { margin: 0; font-size: 15px; }
+  .court { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .court-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+  .team { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+  .team.b { text-align: right; align-items: flex-end; }
+  .vs { color: var(--muted); font-size: 12px; }
+  /* Group colours (the letters stay on the chips so colour is never the only cue) */
+  .tag.lv1 { background: var(--g1-bg); color: var(--g1-fg); } .tag.lv2 { background: var(--g2-bg); color: var(--g2-fg); }
+  .tag.lv3 { background: var(--g3-bg); color: var(--g3-fg); } .tag.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
+  .tag { font-weight: 600; }
+  #summary td:first-child { white-space: nowrap; }
+  /* Group dropdowns use the same colours as the badges on the court cards */
+  select.lvl { font-weight: 600; }
+  select.lvl.lv1, option.lv1 { background: var(--g1-bg); color: var(--g1-fg); } select.lvl.lv2, option.lv2 { background: var(--g2-bg); color: var(--g2-fg); }
+  select.lvl.lv3, option.lv3 { background: var(--g3-bg); color: var(--g3-fg); } select.lvl.lv4, option.lv4 { background: var(--gb-bg); color: var(--gb-fg); }
+  .tag { font-size: 11px; color: var(--muted); background: var(--chip); border-radius: 10px; padding: 0 6px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 11px; color: var(--muted); }
+  .dim { opacity: .55; text-decoration: line-through; }
+  .sit { font-size: 13px; margin-top: 4px; }
+  .round-actions { display: flex; gap: 6px; }
+  .edited { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .swap-hint { font-size: 13px; margin: 0 0 8px; color: var(--muted); }
+  /* Swap mode: every player becomes a chip you can tap (then tap another) or drag onto another */
+  .pl { font: inherit; color: inherit; text-align: inherit; background: transparent; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; min-height: 44px; display: inline-flex; align-items: center; gap: 2px; max-width: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .team.b .pl { justify-content: flex-end; }
+  .pl.sel { border: 2px solid var(--accent); background: var(--chip); }
+  .pl.over { border: 2px solid var(--accent); background: var(--chip); }
+  .pl.drag { opacity: .45; }
+  .seat { flex-direction: column; line-height: 1.25; font: inherit; color: var(--muted); background: transparent; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; max-width: 100%; cursor: pointer; font-size: 14px; }
+  .seat.ready, .seat.over { border: 2px solid var(--accent); color: var(--text); background: var(--chip); }
+  .edit-msg { font-size: 13px; margin: 0 0 8px; color: var(--danger); }
+  .ghost { position: fixed; z-index: 10; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--card); border: 2px solid var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.25); font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Short viewports (e.g. a foldable's outer screen in landscape is only ~370px tall):
+     give the content every spare pixel. Nothing in this app is sticky or fixed-position. */
+  @media (max-height: 460px) {
+    header { padding-top: 6px; padding-bottom: 2px; }
+    .tabs button { min-height: 44px; }
+    main { padding-top: 8px; padding-bottom: 8px; gap: 8px; }
+    .panel { gap: 8px; }
+  }
+  /* Wide, near-square inner screens: keep a comfortable reading width for the tables */
+  .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media print {
+    #info-btn, #info-pop, .tabbar, #panel-players, #controls, #summary-section, .no-print { display: none !important; }
+    #panel-fixtures { display: grid !important; } /* print the fixtures whichever tab is showing */
+    body { background: #fff; color: #000; }
+    section, .round, .court { border-color: #999; }
+    .rounds { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1f7a4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pickleball">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <h1 id="title"><svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false"><g transform="rotate(-40 16 16)"><rect x="9" y="1.5" width="14" height="18" rx="6.5" fill="var(--accent)"/><rect x="14" y="18.5" width="4" height="8" rx="1.2" fill="var(--text)" opacity=".8"/><rect x="13.2" y="26" width="5.6" height="3.6" rx="1.4" fill="var(--text)"/><g fill="var(--card)" opacity=".85"><circle cx="13" cy="6.5" r="1.1"/><circle cx="19" cy="6.5" r="1.1"/><circle cx="16" cy="10" r="1.1"/><circle cx="12.3" cy="13.5" r="1.1"/><circle cx="19.7" cy="13.5" r="1.1"/></g></g></svg><span class="ttl">Pickleball Session Manager</span><span class="name-wrap" id="name-wrap"><span aria-hidden="true">:</span> <input type="text" id="session-name" placeholder="Session name" maxlength="60" aria-label="Session name (tap to edit)" autocomplete="off" enterkeyhint="done"></span><button type="button" id="name-edit" class="name-edit" aria-label="Name this session" title="Name this session">&#9998;</button></h1>
+    <button type="button" class="new-btn" data-action="newsession" aria-label="New session"><span aria-hidden="true">+ New<span class="long"> session</span></span></button>
+    <button type="button" id="info-btn" class="info-btn" aria-label="Help for this page" aria-expanded="false" aria-controls="info-pop"><span aria-hidden="true">i</span></button>
+  </div>
+  <div id="info-pop" role="dialog" aria-label="Help" hidden>
+    <div id="info-players">
+      <h2>Players</h2>
+      <ul>
+        <li>Put each player in a group: <b>1</b> is the strongest, then <b>2</b> and <b>3</b>; <b>B</b> is Beginner. Use only the groups you need.</li>
+        <li>A new session shows Group 1 and Beginner; tap <b>Add group</b> to show Group 2, then Group 3 (a group with players is always shown). Rank players within their group, strongest at the top, with the ▲▼ buttons (or, on wide screens, drag the ⋮⋮ handle). A player you move to another group joins it at the bottom; a new player starts at the bottom of their group.</li>
+        <li>Tick <b>No singles</b> on a player to keep them off the singles court (including beginners).</li>
+        <li>Tap the pencil next to the title to name the session; tap the name to change it. <b>+ New</b> (top right) starts a new session: it clears the players, rounds and name after asking (the number of rounds and session style are kept). This cannot be undone.</li>
+        <li>Untick <b>Active</b> for an injury or departure, and tick it again for a late arrival. Then regenerate on the Fixtures tab.</li>
+        <li>Players already used in a round can be deactivated but not removed.</li>
+      </ul>
+    </div>
+    <div id="info-fixtures" hidden>
+      <h2>Fixtures</h2>
+      <ul>
+        <li><b>Generate rounds</b> (it reads <b>Regenerate rounds</b> once there are fixtures) rebuilds every round that is not locked. It is greyed out when nothing has changed since the rounds were generated, because the same settings always give the same rounds. Change the roster, ranking, style, round count or a lock and it comes back. <b>Lock</b> keeps a round exactly as it is.</li>
+        <li><b>Session style</b>: choose <b>Competitive</b>, <b>Social</b> or <b>Club sheets</b> (greyed out unless there are exactly 5 rounds and 6 to 14 active players). See <i>How the fixtures work</i> below for the difference.</li>
+        <li><b>Edit</b> a round to swap players: tap one, then another, or drag one onto another. Singles and 2 v 1 courts show empty seats: move a player onto one to grow that court (singles becomes 2 v 1, 2 v 1 becomes doubles). The court they left adjusts (doubles becomes 2 v 1, 2 v 1 becomes singles). With fewer than 12 players the singles match is on Court 3, so the half court (Court 4) is only used when you need it. Court 4 only takes singles, so it has no empty seats. A round you change is locked so Regenerate leaves it alone. Unlock it to let Regenerate redo it.</li>
+        <li><b>Clear All</b> removes every round, locked ones too, after asking. Players and settings are kept. Reducing the number of rounds removes them from the end, and an <b>Undo</b> button appears for a moment.</li>
+        <li>Changing the roster, groups or settings after generating shows a notice. Regenerate to apply the change to unlocked rounds.</li>
+      </ul>
+    </div>
+    <div id="info-how">
+      <h2>How the fixtures work</h2>
+      <ul>
+        <li>Rounds are built one at a time. The app tries to keep games evenly matched, to avoid repeat partners, opponents and foursomes (especially back-to-back), and to share singles, 2 v 1 and the other games fairly. The same settings always give the same fixtures.</li>
+        <li><b>Groups</b>: group players by playing level, not friendship. Very small groups (one or two players) give the app little room to work with. <b>For Social sessions, one group plus Beginners is usually enough</b>: extra groups make only a small difference there, so it is simpler to keep the one group in a rough order. Groups matter most for <b>Competitive</b> sessions, where they keep each court closely matched. Keep the Beginner group in either style, because the beginner rules depend on it.</li>
+        <li><b>Ranking</b>: the order within a group is a very rough ranking, strongest at the top. <b>It only needs to be approximate</b>: there is no need to get it perfect, and nobody should read anything into where they sit. It is only a gentle tie-break (for example, it helps decide who is the solo in a 2 v 1) and never overrides the groups or who plays how often. If you are unsure, leave it.</li>
+        <li><b>Competitive</b> keeps players mostly with their own group, so games are closely matched. <b>Social</b> mixes neighbouring groups more freely, with a little built-in variety, so stronger and weaker players share a court more often; teams are still balanced (for example strong + weaker v strong + weaker). On small or lopsided rosters, or with few rounds, the two styles can give identical fixtures, and with only one group the style makes no difference.</li>
+        <li><b>Club sheets</b> uses the club's own fixed fixtures for the number of active players, in roster order (slot 1 is the first, strongest player; groups and beginner rules are ignored). It is only for a fresh session of exactly 5 rounds with 6 to 14 players. Once the rounds are generated the style switches to Social straight away (Regenerate rounds stays greyed out), so anything you change afterwards is rebuilt in the Social style around any locked rounds.</li>
+        <li><b>Beginners</b> are kept together where possible and the repeat rules are relaxed for them. With two or more beginners, two of them play each other on the singles court in the first round and again around the middle of the session; with no singles court but a 2 v 1, two beginners are the pair in it. The app avoids putting the same strong players with beginners more than once, most of all the higher ranked Group 1 players. The Session summary shows a <b>B games</b> column (games played with a beginner on the court) when beginners are playing.</li>
+        <li><b>Hand edits</b>: an edited round is locked, so Regenerate leaves it alone and rebuilds the other rounds around it.</li>
+      </ul>
+    </div>
+    <p class="muted info-foot">Up to 14 players. Runs entirely in your browser; data stays on this device.</p>
+    <button type="button" id="info-close" class="info-close">Close</button>
+  </div>
+</header>
+<div class="tabbar">
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="true" data-tab="players">Players</button>
+    <button type="button" role="tab" id="tab-fixtures" aria-controls="panel-fixtures" aria-selected="false" tabindex="-1" data-tab="fixtures">Fixtures</button>
+  </div>
+</div>
+<main>
+  <div id="notices">
+    <div id="confirm-bar" class="banner undo" role="alertdialog" aria-labelledby="confirm-msg" hidden><span id="confirm-msg"></span> <span class="confirm-btns"><button type="button" class="danger" id="confirm-yes">Yes</button> <button type="button" id="confirm-no">Cancel</button></span></div>
+    <div id="undo-bar" class="banner undo" hidden><span id="undo-msg"></span> <button type="button" id="undo-btn">Undo</button></div>
+  </div>
+  <div class="panel" id="panel-players" role="tabpanel" aria-labelledby="tab-players">
+    <section id="roster-section">
+      <div class="toolbar" style="margin-bottom:8px">
+        <h2 style="margin:0">Roster</h2>
+        <span class="muted" id="roster-count"></span>
+        <span class="spacer"></span>
+        <button data-action="addgroup" title="Show another group">Add group</button>
+      </div>
+      <div id="status-players"></div>
+      <div id="roster"></div>
+    </section>
+  </div>
+
+  <div class="panel" id="panel-fixtures" role="tabpanel" aria-labelledby="tab-fixtures" hidden>
+    <section id="controls">
+      <div class="setup">
+        <div class="field">
+          <label for="rounds-count">Rounds</label>
+          <select id="rounds-count"></select>
+        </div>
+        <div class="field">
+          <label for="style">Session style</label>
+          <select id="style">
+            <option value="0">Competitive</option>
+            <option value="1">Social</option>
+            <option value="2" id="club-opt">Club sheets</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:8px">
+        <button class="primary" id="gen-btn" data-action="regenerate">Generate rounds</button>
+        <button class="danger" data-action="clearall">Clear All</button>
+      </div>
+      <div id="status"></div>
+    </section>
+
+    <section id="rounds-section">
+      <h2>Rounds</h2>
+      <div class="rounds" id="rounds"></div>
+    </section>
+
+    <section id="summary-section">
+      <details id="summary-details">
+        <summary><h2>Session summary</h2></summary>
+        <div id="summary"></div>
+      </details>
+    </section>
+  </div>
+</main>
+
+<script>
+// Pickleball Matchmaker & Rotation Engine (proficiency-level variant)
+// Framework-agnostic ES module. No dependencies.
+//
+// Data model
+//   Player  { id, name, level, active, singlesOptOut }   level: 1 = Advanced, 2 = Intermediate, 3 = Beginner (see LEVELS)
+//   Court   { court, type: 'doubles'|'2v1'|'singles', teamA: [ids], teamB: [ids] }
+//             - doubles: teamA/teamB are pairs
+//             - 2v1:     teamA is the solo ("1") side, teamB is the tandem ("2") side
+//             - singles: one id per side
+//   Round   { number, locked, courts: [Court], sitOuts: [ids], warnings: [string] }
+//   Session { players: [Player], rounds: [Round x5] }
+//
+// A player's "History" (spec section 2) is derived from the rounds on demand
+// (see getPlayerHistory) instead of being stored per player, so it can never
+// drift out of sync with the rounds, and locking/regenerating stays trivial.
+
+const DEFAULT_ROUNDS = 5;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 12;
+const TOTAL_ROUNDS = DEFAULT_ROUNDS; // kept for backwards compatibility
+const MAX_PLAYERS = 14;
+// Venue: courts 1-3 are full courts and court 4 is a half court (singles only). Singles may use a full court, so
+// with fewer than 12 players (at most two other matches) singles goes on court 3 and court 4 is never needed.
+const HALF_COURT_NUMBER = 4; // singles only: nobody can be added to it
+const singlesCourtNumber = (n) => (n < 12 ? 3 : HALF_COURT_NUMBER);
+
+// Section 3. d = doubles courts, t = 2v1 courts, s = singles courts.
+// Entries for N = 0..4 are NOT in the spec; they are sensible extensions.
+const LAYOUTS = {
+  14: { d: 3, t: 0, s: 1 },
+  13: { d: 2, t: 1, s: 1 },
+  12: { d: 3, t: 0, s: 0 },
+  11: { d: 2, t: 1, s: 0 },
+  10: { d: 2, t: 0, s: 1 },
+  9:  { d: 1, t: 1, s: 1 },
+  8:  { d: 2, t: 0, s: 0 },
+  7:  { d: 1, t: 1, s: 0 },
+  6:  { d: 1, t: 0, s: 1 },
+  5:  { d: 0, t: 1, s: 1 },
+  4:  { d: 1, t: 0, s: 0 },
+  3:  { d: 0, t: 1, s: 0 },
+  2:  { d: 0, t: 0, s: 1 },
+  1:  { d: 0, t: 0, s: 0 },
+  0:  { d: 0, t: 0, s: 0 },
+};
+
+const capacity = (l) => 4 * l.d + 3 * l.t + 2 * l.s;
+
+// Cost weights for the variety search (section 5). Hard rule = BLOCK.
+const BLOCK = 1e6;
+const W = {
+  partnerRepeat: 8,   // per earlier time this pair were partners (any round)
+  opponentRepeat: 2,  // per earlier time this pair were opponents (any round)
+  adjPartner: 20,     // extra: partnered in the round immediately before/after
+  adjOpponent: 4,     // extra: opposed each other in the round immediately before/after
+  levelBalance: 20,   // doubles: per level point of difference between the two teams' combined levels
+                      // (A+I v A+I is free; A+A v I+I costs 40, so it only happens to dodge a repeat)
+  soloSwap: 200,      // 2v1: per level point by which the solo player is weaker than the strongest of the three
+                      // (equal-level players can swap the solo role freely)
+  beginnerRelax: 0.25, // courts of ONLY beginners: repeat/back-to-back costs are scaled by this (1 = same as everyone)
+  beginnerIdentical: 30, // ...and an identical repeat there costs this instead of being forbidden (so beginners can
+                      // keep playing together rather than being spread across the stronger courts)
+  beginnerSingles: 0.5, // each singles match a beginner plays counts as this much of a turn, so beginners come up for
+                      // singles about 1/this times as often as everyone else (1 = same as everyone). They are
+                      // paired with each other when possible: practice without a partner to let down.
+  beginnerStay: 2,    // beginners pay this many times the displacement cost for being moved off a beginner court
+  rankBalance: 2,     // doubles: per point of difference between the teams' within-group rank scores (a tie-break between
+                      // splits of equal level balance: the best and weakest of a group pair up against the middle two)
+  soloRank: 40,       // 2v1: per level point (including the within-group rank fraction) by which the solo player is weaker
+                      // than the strongest of the three, so the higher ranked of two same-group players is the solo
+  beginnerStrong: 40, // a strong player (Group 1 most, higher ranked more) on a court with a beginner pays this x games already
+                      // played with beginners x a strength weight, so the same strong players are not paired with beginners again and again
+  strengthBias: 1,    // 1 = on, 0 = off. Tie-breaks only (fairness counts are never touched): among equally fair
+                      // singles pairs the weaker pair goes first, and among equally rested players a mid-level
+                      // one sits first, so the strongest players stay in the doubles courts. Override: opts.strengthBias.
+};
+
+// Roster order within a group is an implicit strength ranking (first = strongest). It becomes a small offset in
+// (-RANK_SPREAD/2, +RANK_SPREAD/2) around the group's level so it can never outweigh a whole level.
+const RANK_SPREAD = 0.9;
+/** id -> rank offset for each active player: the first of a group is -0.45, the last +0.45 (a lone player 0). */
+function rankOffsets(players) {
+  const byLevel = new Map();
+  for (const p of players) if (p.active) {
+    const k = levelInfo(p.level).value;
+    if (!byLevel.has(k)) byLevel.set(k, []);
+    byLevel.get(k).push(p.id);
+  }
+  const out = new Map();
+  for (const ids of byLevel.values()) ids.forEach((id, r) => out.set(id, ids.length > 1 ? (r / (ids.length - 1) - 0.5) * RANK_SPREAD : 0));
+  return out;
+}
+
+/**
+ * Groups, strongest first. `value` is what is stored on a player; `skill` is the distance scale the search uses
+ * (Beginner sits a step further from Group 3 than Group 3 does from Group 2: they have never played).
+ * `beginner` groups get relaxed variety rules (see beginnerRelax). Add an entry here to add a group.
+ */
+const LEVELS = [
+  { value: 1, label: 'Group 1', short: '1', skill: 1 },
+  { value: 2, label: 'Group 2', short: '2', skill: 2 },
+  { value: 3, label: 'Group 3', short: '3', skill: 3 },
+  { value: 4, label: 'Beginner', short: 'B', skill: 5, beginner: true },
+];
+const DEFAULT_LEVEL = 2;
+const levelInfo = (v) => LEVELS.find((l) => l.value === v) || LEVELS.find((l) => l.value === DEFAULT_LEVEL);
+
+/**
+ * "Level mixing" setting. Controls how strongly the engine keeps players on courts of their own level
+ * versus how strongly it avoids putting the same people together in consecutive rounds.
+ *   displacement : cost = displacement * (levels away from the court's natural level span)^2 per player
+ *   adjCoCourt   : cost per pair of players who shared a court in the adjacent round
+ *   singlesTol   : how many levels apart a singles pair may be, to avoid a repeat
+ *   jitter       : size of a repeatable pseudo-random cost added to each possible court (who plays together), so
+ *                  near-equal options are not always resolved the same way (more mixing between groups)
+ */
+const MIXING = {
+  0: { label: 'Competitive', displacement: 8.5, adjCoCourt: 10.5, singlesTol: 0, jitter: 0 }, // between the old Balanced and Strict, nearer Strict
+  1: { label: 'Social',      displacement: 0.6, adjCoCourt: 18,   singlesTol: 1, jitter: 3 }, // was the old High (1.5); lower displacement and a little repeatable randomness mix groups more
+};
+const DEFAULT_MIXING = 1; // Social
+// Style 2 (Club sheets) does not search at all; see clubSheetRound. These numbers only apply if it falls back.
+MIXING[2] = { ...MIXING[1], label: 'Club sheets' };
+
+// ---------------------------------------------------------------- helpers
+
+const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+const side = (ids) => [...ids].sort().join(',');
+const matchKey = (c) => [side(c.teamA), side(c.teamB)].sort().join(' v ');
+
+function createPlayer({ id, name, level = DEFAULT_LEVEL, active = true, singlesOptOut = false }) {
+  return { id: id ?? `p${Math.random().toString(36).slice(2, 9)}`, name, level: levelInfo(level).value, active, singlesOptOut };
+}
+
+const newRound = (number) => ({ number, locked: false, courts: [], sitOuts: [], warnings: [] });
+const roundHasContent = (r) => r.courts.length > 0 || r.sitOuts.length > 0;
+
+function createSession(players = [], numRounds = DEFAULT_ROUNDS) {
+  if (players.length > MAX_PLAYERS) throw new Error(`Roster is limited to ${MAX_PLAYERS} players`);
+  if (!Number.isInteger(numRounds) || numRounds < MIN_ROUNDS || numRounds > MAX_ROUNDS)
+    throw new Error(`Number of rounds must be a whole number from ${MIN_ROUNDS} to ${MAX_ROUNDS}`);
+  return {
+    players: players.map((p) => ({ ...p })),
+    rounds: Array.from({ length: numRounds }, (_, i) => newRound(i + 1)),
+  };
+}
+
+/**
+ * Change the number of rounds. Growing appends empty, unlocked rounds. Shrinking removes rounds from the
+ * end, so earlier rounds (and anything locked there) are never disturbed. Returns the removed rounds that
+ * had fixtures in them, so a UI can warn before calling this.
+ */
+function setRoundCount(session, n) {
+  if (!Number.isInteger(n) || n < MIN_ROUNDS || n > MAX_ROUNDS)
+    throw new Error(`Number of rounds must be a whole number from ${MIN_ROUNDS} to ${MAX_ROUNDS}`);
+  const removed = session.rounds.length > n ? session.rounds.slice(n).filter(roundHasContent) : [];
+  while (session.rounds.length > n) session.rounds.pop();
+  while (session.rounds.length < n) session.rounds.push(newRound(session.rounds.length + 1));
+  return removed;
+}
+
+function buildHistory(rounds, currentNumber = null) {
+  const h = {
+    partner: new Map(), opponent: new Map(), singles: new Map(), singlesPairs: new Map(),
+    sitOut: new Map(), lastSat: new Map(), matchKeys: new Set(),
+    // Pairs from the rounds immediately before and after the one being built (consecutive-round control)
+    adjCo: new Set(), adjPartner: new Set(), adjOpp: new Set(),
+  };
+  const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+  for (const r of rounds) {
+    for (const c of r.courts) {
+      h.matchKeys.add(matchKey(c));
+      if (c.type === 'singles') {
+        const a = c.teamA[0], b = c.teamB[0];
+        inc(h.singles, a); inc(h.singles, b); inc(h.singlesPairs, pairKey(a, b));
+        continue;
+      }
+      for (const s of [c.teamA, c.teamB]) if (s.length === 2) inc(h.partner, pairKey(s[0], s[1]));
+      for (const a of c.teamA) for (const b of c.teamB) inc(h.opponent, pairKey(a, b));
+    }
+    for (const id of r.sitOuts) {
+      inc(h.sitOut, id);
+      h.lastSat.set(id, Math.max(h.lastSat.get(id) ?? -1, r.number));
+    }
+  }
+  if (currentNumber !== null) {
+    for (const r of rounds) {
+      if (Math.abs(r.number - currentNumber) !== 1) continue;
+      for (const c of r.courts) {
+        const all = [...c.teamA, ...c.teamB];
+        for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) h.adjCo.add(pairKey(all[i], all[j]));
+        for (const s of [c.teamA, c.teamB]) if (s.length === 2) h.adjPartner.add(pairKey(s[0], s[1]));
+        for (const a of c.teamA) for (const b of c.teamB) h.adjOpp.add(pairKey(a, b));
+      }
+    }
+  }
+  return h;
+}
+
+/** Per-player view of history (spec section 2 "History"). */
+function getPlayerHistory(rounds, playerId) {
+  const out = { partners: [], opponents: [], singlesMatches: 0, soloMatches: 0, sitOuts: 0, rounds: [] };
+  for (const r of rounds) {
+    if (r.sitOuts.includes(playerId)) { out.sitOuts++; out.rounds.push({ round: r.number, sitOut: true }); continue; }
+    for (const c of r.courts) {
+      const inA = c.teamA.includes(playerId), inB = c.teamB.includes(playerId);
+      if (!inA && !inB) continue;
+      const mine = inA ? c.teamA : c.teamB, theirs = inA ? c.teamB : c.teamA;
+      if (c.type === 'singles') out.singlesMatches++;
+      if (c.type === '2v1' && mine.length === 1) out.soloMatches++; // the lone player in a 2v1 plays alone like a singles match
+      out.partners.push(...mine.filter((x) => x !== playerId));
+      out.opponents.push(...theirs);
+      out.rounds.push({ round: r.number, court: c.court, type: c.type });
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- step 4.1
+
+function pickSingles(active, hist, levelOf, params) {
+  const eligible = active.filter((p) => !p.singlesOptOut);
+  if (eligible.length < 2) return null;
+  const cnt = (p) => (hist.singles.get(p.id) || 0) * (params.begOf.has(p.id) ? params.beginnerSingles : 1);
+  const sorted = [...eligible].sort((a, b) => cnt(a) - cnt(b) || levelOf.get(a.id) - levelOf.get(b.id));
+  const minCount = cnt(sorted[0]);
+  const g0 = sorted.filter((p) => cnt(p) === minCount);
+  const pairs = [];
+  if (g0.length >= 2) {
+    for (let i = 0; i < g0.length; i++) for (let j = i + 1; j < g0.length; j++) pairs.push([g0[i], g0[j]]);
+  } else {
+    // Only one player at the lowest count: they must play; partner comes from the next-lowest tier.
+    const rest = sorted.slice(1);
+    const nextCount = cnt(rest[0]);
+    for (const b of rest.filter((p) => cnt(p) === nextCount)) pairs.push([g0[0], b]);
+  }
+  const diff = ([a, b]) => Math.abs(levelOf.get(a.id) - levelOf.get(b.id));
+  // Closest level is the first choice; the mixing level lets a pair one level further apart win when it
+  // avoids two players who just shared a court (or a repeat singles match).
+  const minDiff = Math.min(...pairs.map(diff));
+  const near = pairs.filter((p) => diff(p) <= minDiff + params.singlesTol);
+  const score = (p) => [
+    // just played together in the adjacent round (not held against two beginners: they are meant to be together)
+    hist.adjCo.has(pairKey(p[0].id, p[1].id)) && !(params.begOf.has(p[0].id) && params.begOf.has(p[1].id)) ? 1 : 0,
+    hist.singlesPairs.get(pairKey(p[0].id, p[1].id)) || 0,  // earlier singles rematch
+    diff(p),                                                 // closest level
+    -(params.begOf.has(p[0].id) + params.begOf.has(p[1].id)), // beginner pairs first: singles is their practice court
+    // Tie-break between equally fair pairs: with a strength bias, the weaker pair goes first so the
+    // strongest players are not pulled out of the doubles courts early (counts still even out over time).
+    (levelOf.get(p[0].id) + levelOf.get(p[1].id)) * (params.strengthBias > 0 ? -1 : 1),
+    Math.abs((params.rankOf.get(p[0].id) ?? 0) - (params.rankOf.get(p[1].id) ?? 0)), // last: closest within-group rank
+  ];
+  near.sort((x, y) => { const sx = score(x), sy = score(y); for (let i = 0; i < sx.length; i++) if (sx[i] !== sy[i]) return sx[i] - sy[i]; return 0; });
+  return near[0];
+}
+
+function pickSitOuts(pool, k, hist, levelOf, params) {
+  if (k <= 0) return [];
+  // Tie-break (only between equally rested players): with a strength bias, the middle level sits first so
+  // neither the strongest nor the weakest group is broken up; otherwise strongest first.
+  const lv = pool.map((p) => levelOf.get(p.id));
+  const mid = (Math.min(...lv) + Math.max(...lv)) / 2;
+  const tie = (p) => (params.strengthBias > 0 ? Math.abs(levelOf.get(p.id) - mid) : levelOf.get(p.id));
+  return [...pool]
+    .sort((a, b) =>
+      (hist.sitOut.get(a.id) || 0) - (hist.sitOut.get(b.id) || 0) ||
+      (hist.lastSat.get(a.id) ?? -1) - (hist.lastSat.get(b.id) ?? -1) ||
+      tie(a) - tie(b))
+    .slice(0, k);
+}
+
+// ------------------------------------------------- steps 4.2 / 4.3 / section 5
+
+// How much a player's level counts when they are put with beginners again (Group 1 fully, Group 2 a little, others not).
+const strengthWeight = (skill) => (skill <= 1 ? 1 : skill === 2 ? 0.25 : 0);
+
+function bestCourt(g, hist, params, levelOf) {
+  // g is sorted strongest -> weakest level
+  const L = (id) => levelOf.get(id);
+  const R = (id) => params.rankOf?.get(id) ?? 0; // within-group rank offset (negative = higher ranked)
+  const sum = (t) => t.reduce((a, id) => a + L(id), 0);
+  const rsum = (t) => t.reduce((a, id) => a + R(id), 0);
+  let opts;
+  if (g.length === 4) {
+    const splits = [[[g[0], g[3]], [g[1], g[2]]], [[g[0], g[2]], [g[1], g[3]]], [[g[0], g[1]], [g[2], g[3]]]];
+    const gaps = splits.map(([a, b]) => Math.abs(sum(a) - sum(b)));
+    const floor = Math.min(...gaps); // the most even split this foursome allows (e.g. G3 + 3 Beginners can't be level)
+    opts = splits.map(([a, b], i) => ({ a, b, cost: W.levelBalance * gaps[i] + W.rankBalance * Math.abs(rsum(a) - rsum(b)), flag: gaps[i] >= 2 && gaps[i] > floor ? 'uneven' : null }));
+  } else {
+    const best = Math.min(...g.map(L));
+    const bestFine = Math.min(...g.map((id) => L(id) + R(id)));
+    opts = g.map((solo, i) => {
+      const gap = L(solo) - best;
+      return { a: [solo], b: g.filter((_, j) => j !== i), cost: W.soloSwap * gap + W.soloRank * (L(solo) + R(solo) - bestFine), flag: gap > 0 ? 'soloSwap' : null };
+    });
+  }
+  // Courts of only beginners get relaxed variety rules: they may play together back-to-back and repeat
+  // partners/matches (at a cost) so that they stay together instead of being spread over stronger courts.
+  const allBeg = g.every((id) => params.begOf.has(id));
+  const k = allBeg ? params.beginnerRelax : 1;
+  // Same set of players on court as in the adjacent round: costs the same whatever the team split
+  let base = 0;
+  if (params.begCo && g.some((id) => params.begOf.has(id))) {
+    for (const id of g) {
+      if (params.begOf.has(id)) continue;
+      const n = params.begCo.get(id) || 0;
+      if (n) base += params.beginnerStrong * n * (strengthWeight(L(id)) * (0.5 - R(id)));
+    }
+  }
+  for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) if (hist.adjCo.has(pairKey(g[i], g[j]))) base += params.adjCoCourt * k;
+  let best = null;
+  for (const o of opts) {
+    let cost = o.cost + base;
+    const key = matchKey({ teamA: o.a, teamB: o.b });
+    const identical = hist.matchKeys.has(key);
+    if (identical) cost += allBeg && k < 1 ? W.beginnerIdentical : BLOCK;
+    for (const s of [o.a, o.b]) if (s.length === 2) {
+      const pk = pairKey(s[0], s[1]);
+      cost += k * W.partnerRepeat * (hist.partner.get(pk) || 0);
+      if (hist.adjPartner.has(pk)) cost += k * W.adjPartner;
+    }
+    for (const x of o.a) for (const y of o.b) {
+      const pk = pairKey(x, y);
+      cost += k * W.opponentRepeat * (hist.opponent.get(pk) || 0);
+      if (hist.adjOpp.has(pk)) cost += k * W.adjOpponent;
+    }
+    if (!best || cost < best.cost) best = { cost, teamA: o.a, teamB: o.b, flag: o.flag, identical, allBeg };
+  }
+  return best;
+}
+
+function forEachCombo(arr, k, cb) {
+  const cur = [];
+  const go = (start) => {
+    if (cur.length === k) { cb(cur.slice()); return; }
+    for (let i = start; i <= arr.length - (k - cur.length); i++) { cur.push(arr[i]); go(i + 1); cur.pop(); }
+  };
+  go(0);
+}
+
+/**
+ * Cluster by level and split into teams, subject to the variety rules (section 5).
+ * The pool is sorted strongest -> weakest and cut into court-sized slices; each slice has a natural span of
+ * levels (e.g. a court of four Advanced players spans [1,1]; a mixed slice spans [2,3]). A player on a court
+ * whose span does not include their level pays displacement * (levels away)^2, so players of the same level
+ * are interchangeable and mixing between neighbouring levels is cheap only when variety needs it.
+ * Exhaustively scores every way to partition the pool (max 34,650 partitions for 12 players; court scores
+ * are cached and the search prunes on the best cost found).
+ */
+// Deterministic pseudo-random number in [0, 1) from a string (the same inputs always give the same value).
+function hash01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 13; h = Math.imul(h, 1274126177); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function clusterAndSplit(poolIds, sizes, hist, params, levelOf) {
+  const lv = poolIds.map((id) => levelOf.get(id));
+  const spans = []; let off = 0;
+  for (const s of sizes) { spans.push([lv[off], lv[off + s - 1]]); off += s; }
+  const cache = new Map();
+  const courtOf = (combo) => {
+    const key = combo.join(',');
+    let v = cache.get(key);
+    if (!v) { v = bestCourt(combo.map((i) => poolIds[i]), hist, params, levelOf); cache.set(key, v); }
+    return v;
+  };
+  let best = { cost: Infinity, groups: null };
+  const rec = (ci, remaining, groups, cost) => {
+    if (cost >= best.cost) return;
+    if (ci === sizes.length) { best = { cost, groups: groups.slice() }; return; }
+    const [lo, hi] = spans[ci];
+    forEachCombo(remaining, sizes[ci], (combo) => {
+      let d2 = 0;
+      for (const q of combo) { const d = lv[q] < lo ? lo - lv[q] : lv[q] > hi ? lv[q] - hi : 0; d2 += d * d * (params.begOf.has(poolIds[q]) ? params.beginnerStay : 1); }
+      const court = courtOf(combo);
+      const set = new Set(combo);
+      groups.push({ combo, court });
+      const jit = params.jitter ? params.jitter * hash01(params.round + ':' + combo.map((i) => poolIds[i]).sort().join(',')) : 0;
+      rec(ci + 1, remaining.filter((x) => !set.has(x)), groups, cost + params.displacement * d2 + court.cost + jit);
+      groups.pop();
+    });
+  };
+  rec(0, poolIds.map((_, i) => i), [], 0);
+  return best;
+}
+
+
+// ---------------------------------------------------------------- club sheets
+/**
+ * The club's own fixed fixtures, one table per number of players, for sessions of exactly 5 rounds. Slot 1 is the
+ * strongest player, so slot k is the k-th player in roster order (groups are ignored). Each court is
+ * [court number, type, side A, side B] with d = doubles, t = 2v1 (side A is the solo player, side B the pair) and
+ * s = singles. Copied from the club's "n PLAYERS" spreadsheets (master tab of each).
+ */
+const CLUB_STYLE = 2;
+const CLUB_ROUNDS = 5;
+const CLUB_TYPES = { d: 'doubles', t: '2v1', s: 'singles' };
+const CLUB_SHEETS = {
+  6: [
+    [[1,"d",[1,4],[2,3]],[2,"s",[5],[6]]],
+    [[1,"s",[3],[4]],[2,"d",[1,6],[2,5]]],
+    [[1,"d",[3,6],[4,5]],[2,"s",[1],[2]]],
+    [[1,"s",[6],[2]],[2,"d",[1,5],[4,3]]],
+    [[1,"d",[4,6],[5,3]],[2,"s",[1],[2]]],
+  ],
+  7: [
+    [[1,"d",[3,4],[6,2]],[2,"t",[1],[7,5]]],
+    [[1,"t",[1],[6,7]],[2,"d",[3,5],[4,2]]],
+    [[1,"s",[1],[2]],[2,"s",[6],[5]],[3,"t",[3],[4,7]]],
+    [[1,"t",[2],[6,5]],[2,"d",[1,7],[4,3]]],
+    [[1,"d",[7,5],[4,6]],[2,"t",[1],[2,3]]],
+  ],
+  8: [
+    [[1,"d",[1,4],[2,3]],[2,"d",[5,8],[6,7]]],
+    [[1,"d",[2,6],[3,5]],[2,"d",[1,8],[4,7]]],
+    [[1,"d",[4,8],[3,6]],[2,"d",[1,7],[2,5]]],
+    [[1,"d",[1,3],[2,4]],[2,"d",[5,7],[6,8]]],
+    [[1,"d",[1,6],[2,7]],[2,"d",[3,8],[4,5]]],
+  ],
+  9: [
+    [[1,"d",[2,5],[6,3]],[2,"t",[1],[4,7]],[3,"s",[9],[8]]],
+    [[1,"d",[2,7],[3,4]],[2,"t",[1],[9,8]],[3,"s",[5],[6]]],
+    [[1,"t",[3],[9,6]],[2,"d",[4,8],[5,7]],[3,"s",[1],[2]]],
+    [[1,"d",[6,5],[1,9]],[2,"t",[2],[8,7]],[3,"s",[3],[4]]],
+    [[1,"t",[1],[3,2]],[2,"d",[5,8],[4,6]],[3,"s",[9],[7]]],
+  ],
+  10: [
+    [[1,"d",[1,5],[2,3]],[2,"d",[4,8],[6,7]],[3,"s",[9],[10]]],
+    [[1,"d",[1,9],[7,8]],[2,"d",[2,10],[5,6]],[3,"s",[3],[4]]],
+    [[1,"d",[3,10],[6,8]],[2,"d",[4,9],[5,7]],[3,"s",[1],[2]]],
+    [[1,"d",[1,10],[6,4]],[2,"d",[2,5],[3,9]],[3,"s",[7],[8]]],
+    [[1,"d",[1,3],[2,4]],[2,"d",[7,10],[8,9]],[3,"s",[5],[6]]],
+  ],
+  11: [
+    [[1,"d",[1,4],[2,3]],[2,"d",[5,8],[6,7]],[3,"t",[10],[9,11]]],
+    [[1,"d",[11,4],[6,9]],[2,"d",[2,10],[3,5]],[3,"t",[1],[7,8]]],
+    [[1,"d",[1,3],[2,4]],[2,"t",[5],[7,9]],[3,"d",[6,11],[10,8]]],
+    [[1,"t",[1],[6,10]],[2,"d",[2,9],[4,5]],[3,"d",[11,7],[3,8]]],
+    [[1,"d",[1,11],[9,8]],[2,"t",[2],[4,10]],[3,"d",[3,7],[5,6]]],
+  ],
+  12: [
+    [[1,"d",[1,12],[10,11]],[2,"d",[2,9],[4,3]],[3,"d",[5,8],[7,6]]],
+    [[1,"d",[1,4],[2,3]],[2,"d",[6,8],[5,7]],[3,"d",[9,11],[10,12]]],
+    [[1,"d",[1,6],[2,5]],[2,"d",[3,10],[4,9]],[3,"d",[7,12],[8,11]]],
+    [[1,"d",[1,3],[2,4]],[2,"d",[5,9],[7,8]],[3,"d",[6,11],[10,12]]],
+    [[1,"d",[1,7],[8,9]],[2,"d",[2,10],[3,6]],[3,"d",[11,4],[5,12]]],
+  ],
+  13: [
+    [[1,"d",[1,4],[2,3]],[2,"d",[6,8],[5,7]],[3,"t",[11],[9,10]],[4,"s",[13],[12]]],
+    [[1,"d",[5,6],[1,9]],[2,"d",[3,8],[4,7]],[3,"t",[2],[13,12]],[4,"s",[11],[10]]],
+    [[1,"t",[1],[2,3]],[2,"d",[5,12],[7,4]],[3,"d",[6,13],[10,11]],[4,"s",[9],[8]]],
+    [[1,"d",[1,6],[2,8]],[2,"d",[7,10],[9,12]],[3,"t",[3],[11,13]],[4,"s",[5],[4]]],
+    [[1,"t",[4],[6,7]],[2,"d",[3,12],[5,11]],[3,"d",[9,13],[8,10]],[4,"s",[1],[2]]],
+  ],
+  14: [
+    [[1,"d",[1,4],[2,3]],[2,"d",[5,8],[6,7]],[3,"d",[9,11],[10,12]],[4,"s",[13],[14]]],
+    [[1,"d",[1,7],[2,6]],[2,"d",[3,12],[8,10]],[3,"d",[9,14],[11,13]],[4,"s",[4],[5]]],
+    [[1,"d",[1,3],[2,4]],[2,"d",[5,14],[7,12]],[3,"d",[6,13],[10,11]],[4,"s",[9],[8]]],
+    [[1,"d",[4,8],[6,5]],[2,"d",[10,9],[7,11]],[3,"d",[1,14],[13,12]],[4,"s",[2],[3]]],
+    [[1,"d",[1,10],[13,9]],[2,"d",[2,14],[8,7]],[3,"d",[5,4],[3,6]],[4,"s",[11],[12]]],
+  ],
+};
+/** True when the club sheets can be used: exactly 5 rounds and a sheet for the number of active players. */
+const clubSheetAvailable = (activeCount, rounds) => rounds === CLUB_ROUNDS && !!CLUB_SHEETS[activeCount];
+
+function clubSheetRound(players, roundNumber, totalRounds) {
+  const skill = (p) => levelInfo(p.level).skill;
+  const active = players.filter((p) => p.active).sort((a, b) => skill(a) - skill(b)); // roster order, groups ignored
+  const sheet = clubSheetAvailable(active.length, totalRounds) && CLUB_SHEETS[active.length][roundNumber - 1];
+  if (!sheet) return null;
+  const id = (slot) => active[slot - 1].id;
+  const courts = sheet.map(([court, t, a, b]) => ({ court, type: CLUB_TYPES[t], teamA: a.map(id), teamB: b.map(id) }));
+  const warnings = [];
+  for (const c of courts) if (c.type === 'singles') {
+    const bad = [...c.teamA, ...c.teamB].map((x) => active.find((p) => p.id === x)).filter((p) => p.singlesOptOut);
+    if (bad.length) warnings.push(`${bad.map((p) => p.name).join(' and ')} opted out of singles but ${bad.length > 1 ? 'are' : 'is'} on the singles court.`);
+  }
+  return { number: roundNumber, locked: false, courts, sitOuts: [], warnings };
+}
+
+// ---------------------------------------------------------------- round generation
+
+/**
+ * Beginner practice rounds: the first round and one later round (about the middle of the session). In those rounds,
+ * if at least two beginners are active, two of them are put together on the singles court (when the layout has
+ * one) or as the tandem pair of the 2v1 (when it has no singles court but does have a 2v1).
+ */
+function practiceRounds(totalRounds) {
+  if (!Number.isInteger(totalRounds) || totalRounds < 2) return [1];
+  return [1, Math.floor(totalRounds / 2) + 1];
+}
+
+function generateRound(players, priorRounds, roundNumber, opts = {}) {
+  if (opts.mixing === CLUB_STYLE) {
+    const fixed = clubSheetRound(players, roundNumber, opts.totalRounds);
+    if (fixed) return fixed;
+    opts = { ...opts, mixing: DEFAULT_MIXING };   // no sheet for this number of players or rounds: fall back to Social
+  }
+  const params = {
+    ...(MIXING[opts.mixing ?? DEFAULT_MIXING] || MIXING[DEFAULT_MIXING]),
+    strengthBias: opts.strengthBias ?? W.strengthBias,
+    beginnerRelax: opts.beginnerRelax ?? W.beginnerRelax,
+    beginnerStay: opts.beginnerStay ?? W.beginnerStay,
+    beginnerSingles: opts.beginnerSingles ?? W.beginnerSingles,
+    begOf: new Set(players.filter((p) => levelInfo(p.level).beginner).map((p) => p.id)),
+    rankOf: rankOffsets(players),
+    round: roundNumber,
+    beginnerStrong: opts.beginnerStrong ?? W.beginnerStrong,
+  };
+  if (opts.jitter !== undefined) params.jitter = opts.jitter;
+  if (opts.displacement !== undefined) params.displacement = opts.displacement;
+  const warnings = [];
+  // strongest -> weakest; roster order breaks ties (sort is stable)
+  const skill = (p) => levelInfo(p.level).skill;
+  const active = players.filter((p) => p.active).sort((a, b) => skill(a) - skill(b));
+  const n = active.length;
+  if (n > MAX_PLAYERS) throw new Error(`${n} active players exceeds the maximum of ${MAX_PLAYERS}`);
+  const levelOf = new Map(active.map((p) => [p.id, skill(p)]));
+  const hist = buildHistory(priorRounds, roundNumber);
+  // games each non-beginner has already played on a court with a beginner (singles excluded)
+  params.begCo = new Map();
+  for (const r of priorRounds) if (r.number !== roundNumber) for (const c of r.courts) {
+    if (c.type === 'singles') continue;
+    const ids = [...c.teamA, ...c.teamB];
+    if (!ids.some((id) => params.begOf.has(id))) continue;
+    for (const id of ids) if (!params.begOf.has(id)) params.begCo.set(id, (params.begCo.get(id) || 0) + 1);
+  }
+
+  let layout = { ...LAYOUTS[n] };
+  const courts = [];
+
+  const begs = active.filter((p) => params.begOf.has(p.id));
+  const practice = opts.beginnerPractice !== false && practiceRounds(opts.totalRounds).includes(roundNumber);
+  const needSingles = layout.s > 0;
+
+  // 4.1 singles
+  let pool = active;
+  if (layout.s) {
+    // practice round: two beginners (if two are willing) take the singles court; the usual rotation picks which two
+    const eligibleBeg = begs.filter((p) => !p.singlesOptOut);
+    const pair = pickSingles(practice && eligibleBeg.length >= 2 ? eligibleBeg : active, hist, levelOf, params);
+    if (pair) {
+      const [a, b] = levelOf.get(pair[0].id) <= levelOf.get(pair[1].id) ? pair : [pair[1], pair[0]];
+      courts.push({ court: singlesCourtNumber(n), type: 'singles', teamA: [a.id], teamB: [b.id] });
+      const ids = new Set([a.id, b.id]);
+      pool = active.filter((p) => !ids.has(p.id));
+    } else {
+      warnings.push('Singles court required but fewer than 2 players are eligible (SinglesOptOut); singles court left empty and the extra players sit out.');
+      layout.s = 0;
+    }
+  }
+
+  // Practice round, no singles court, but a 2v1: two beginners are its tandem pair against a solo player. The pair
+  // rotates among the beginners (fewest turns as the tandem first); the solo is the weakest non-beginner, so the
+  // groups are disturbed as little as possible, moving to the next weakest to avoid repeating an identical match.
+  let forced = null;
+  if (practice && !needSingles && layout.t === 1 && begs.length >= 2) {
+    const turns = new Map();
+    for (const r of priorRounds) for (const c of r.courts) if (c.type === '2v1') for (const id of c.teamB) turns.set(id, (turns.get(id) || 0) + 1);
+    const pair = [...begs].sort((a, b) => (turns.get(a.id) || 0) - (turns.get(b.id) || 0)).slice(0, 2);
+    const pairIds = new Set(pair.map((q) => q.id));
+    const rest = pool.filter((q) => !pairIds.has(q.id));
+    const rank = (q) => params.rankOf.get(q.id) ?? 0;
+    const soloOrder = [...rest.filter((q) => !params.begOf.has(q.id)), ...rest.filter((q) => params.begOf.has(q.id))]
+      .sort((a, b) => (params.begOf.has(a.id) - params.begOf.has(b.id)) || (levelOf.get(b.id) - levelOf.get(a.id)) || (rank(b) - rank(a)));
+    const solo = soloOrder.find((q) => !hist.matchKeys.has(matchKey({ teamA: [q.id], teamB: pair.map((x) => x.id) }))) || soloOrder[0];
+    if (solo) {
+      forced = { court: layout.d + 1, type: '2v1', teamA: [solo.id], teamB: pair.map((x) => x.id) };
+      const used = new Set([solo.id, ...pairIds]);
+      pool = pool.filter((q) => !used.has(q.id));
+      layout = { ...layout, t: 0 };
+    }
+  }
+
+  // sit-outs: none in any standard layout; only arises when the singles court cannot be filled (opt-outs)
+  const k = pool.length - 4 * layout.d - 3 * layout.t;
+  const sitters = pickSitOuts(pool, k, hist, levelOf, params);
+  const sitSet = new Set(sitters.map((p) => p.id));
+  const remaining = pool.filter((p) => !sitSet.has(p.id)); // still level-ordered
+
+  const sizes = [...Array(layout.d).fill(4), ...Array(layout.t).fill(3)];
+  if (sizes.length) {
+    const res = clusterAndSplit(remaining.map((p) => p.id), sizes, hist, params, levelOf);
+    res.groups.forEach((g, i) => {
+      const c = g.court;
+      courts.push({ court: i + 1, type: sizes[i] === 4 ? 'doubles' : '2v1', teamA: c.teamA, teamB: c.teamB });
+      const names = g.combo.map((q) => remaining[q].name).join(', ');
+      if (c.identical && !c.allBeg) warnings.push(`Court ${i + 1} (${names}) repeats an earlier identical match; no alternative was available.`);
+      if (c.flag === 'uneven') warnings.push(`Court ${i + 1} (${names}): the teams are uneven in level, to avoid a repeat.`);
+      if (c.flag === 'soloSwap') warnings.push(`Court ${i + 1} (${names}): the strongest player is not solo, to avoid a repeat.`);
+    });
+  }
+  if (forced) courts.push(forced);
+  courts.sort((a, b) => a.court - b.court);
+
+  return { number: roundNumber, locked: false, courts, sitOuts: sitters.map((p) => p.id), warnings };
+}
+
+// ---------------------------------------------------------------- session ops (section 6)
+
+function setActive(session, playerId, active) {
+  const p = session.players.find((x) => x.id === playerId);
+  if (!p) throw new Error(`Unknown player ${playerId}`);
+  p.active = active;
+}
+
+function setLocked(session, roundNumber, locked) {
+  const r = session.rounds.find((x) => x.number === roundNumber);
+  if (!r) throw new Error(`Unknown round ${roundNumber}`);
+  r.locked = locked;
+}
+
+/**
+ * "Regenerate Unlocked Rounds". Locked rounds are never touched. Each unlocked round
+ * is generated in order using the history of every round already fixed at that point
+ * (all locked rounds, plus unlocked rounds regenerated earlier in this pass), against
+ * the current active pool.
+ */
+function regenerateUnlocked(session, opts = {}) {
+  const known = session.rounds.filter((r) => r.locked);
+  for (const r of session.rounds) {
+    if (r.locked) continue;
+    const fresh = generateRound(session.players, known, r.number, { totalRounds: session.rounds.length, ...opts });
+    r.courts = fresh.courts; r.sitOuts = fresh.sitOuts; r.warnings = fresh.warnings; r.edited = false;
+    known.push(r);
+  }
+  return session;
+}
+
+/**
+ * Manual override: swap two players within one round. Either can be on any court or sitting out, so this covers
+ * moving a player between courts, switching teams, and bringing a sit-out on (the other goes to the bench).
+ * Court types never change. A hand-edited round is locked, so "Regenerate" leaves it alone (unlock it to
+ * hand it back to the generator), and `edited` is set. The generator's warnings no longer describe the new
+ * arrangement, so they are replaced by fresh ones: identical repeats of another round's match, and singles
+ * opt-outs placed on the singles court. Returns the round's new warnings.
+ */
+function swapPlayers(session, roundNumber, idA, idB) {
+  const r = session.rounds.find((x) => x.number === roundNumber);
+  if (!r) throw new Error(`Unknown round ${roundNumber}`);
+  if (idA === idB) return r.warnings;
+  const slots = [];
+  for (const c of r.courts) for (const side of [c.teamA, c.teamB]) side.forEach((id, i) => slots.push([side, i, id]));
+  r.sitOuts.forEach((id, i) => slots.push([r.sitOuts, i, id]));
+  const a = slots.find((x) => x[2] === idA), b = slots.find((x) => x[2] === idB);
+  if (!a || !b) throw new Error('Both players must be in the round');
+  a[0][a[1]] = idB; b[0][b[1]] = idA;
+  r.edited = true; r.locked = true;
+  return refreshWarnings(session, r);
+}
+
+/** Recompute a hand-edited round's warnings (opt-outs on singles, identical repeats). */
+function refreshWarnings(session, r) {
+  const byId = new Map(session.players.map((p) => [p.id, p]));
+  const warnings = [];
+  for (const c of r.courts) {
+    if (c.type === 'singles') {
+      const bad = [...c.teamA, ...c.teamB].map((id) => byId.get(id)).filter((p) => p && p.singlesOptOut);
+      if (bad.length) warnings.push(`${bad.map((p) => p.name).join(' and ')} opted out of singles but ${bad.length > 1 ? 'are' : 'is'} on the singles court.`);
+      continue;
+    }
+    if ([...c.teamA, ...c.teamB].every((id) => byId.get(id) && levelInfo(byId.get(id).level).beginner)) continue; // beginners may repeat
+    const key = matchKey(c);
+    const other = session.rounds.find((x) => x !== r && x.courts.some((y) => y.type !== 'singles' && matchKey(y) === key));
+    if (other) warnings.push(`Court ${c.court} repeats the identical match from round ${other.number}.`);
+  }
+  r.warnings = warnings;
+  return warnings;
+}
+
+/**
+ * Hand edit: seat `playerId` in an empty seat of a court that has room: a 2v1 court becomes doubles, and a singles
+ * court becomes a 2v1 (`side` 'A' or 'B' says which of the two singles players gets the new partner; that pair
+ * becomes the tandem and the other player the solo). The court the player came from adjusts to match: a doubles
+ * court becomes a 2v1 (the partner left on their own is the solo player), a 2v1 court becomes singles, and a
+ * sit-out simply sits in. A singles court can't give a player up, because it would be left with one person.
+ * Returns the round's warnings.
+ */
+function seatPlayer(session, roundNumber, courtNumber, playerId, side = 'A') {
+  const r = session.rounds.find((x) => x.number === roundNumber);
+  if (!r) throw new Error(`Unknown round ${roundNumber}`);
+  const target = r.courts.find((c) => c.court === courtNumber);
+  if (!target || (target.type !== '2v1' && target.type !== 'singles')) throw new Error('Target must be a singles or 2v1 court');
+  if (target.court === HALF_COURT_NUMBER) throw new Error('The half court only takes singles');
+  const src = r.courts.find((c) => [...c.teamA, ...c.teamB].includes(playerId));
+  if (src === target) throw new Error('Player is already on that court');
+  if (src && src.type === 'singles') throw new Error('A singles court needs both of its players');
+  if (!src && !r.sitOuts.includes(playerId)) throw new Error('Player must be in the round');
+  if (src) {
+    const rest = (ids) => ids.filter((id) => id !== playerId);
+    const a = rest(src.teamA), b = rest(src.teamB);
+    if (src.type === 'doubles') {
+      // one side now has a single player (the solo); the other still has the pair
+      const [solo, pair] = a.length === 1 ? [a, b] : [b, a];
+      src.teamA = solo; src.teamB = pair; src.type = '2v1';
+    } else { // 2v1 -> singles
+      const all = [...a, ...b];
+      src.teamA = [all[0]]; src.teamB = [all[1]]; src.type = 'singles';
+    }
+  } else r.sitOuts = r.sitOuts.filter((id) => id !== playerId);
+  if (target.type === '2v1') {
+    target.teamA = [...target.teamA, playerId]; target.type = 'doubles';
+  } else { // singles -> 2v1: teamA = solo, teamB = tandem
+    const [pairSide, soloSide] = side === 'B' ? [target.teamB, target.teamA] : [target.teamA, target.teamB];
+    target.teamA = soloSide; target.teamB = [...pairSide, playerId]; target.type = '2v1';
+  }
+  r.edited = true; r.locked = true;
+  return refreshWarnings(session, r);
+}
+
+// ---------------------------------------------------------------- validation / display
+
+/** Independent check of a session. Returns a list of issue strings (empty = clean). */
+function validateSession(session) {
+  const issues = [];
+  const byId = new Map(session.players.map((p) => [p.id, p]));
+  const seenMatches = new Map();
+  for (const r of session.rounds) {
+    if (!r.courts.length && !r.sitOuts.length) continue; // not generated yet
+    const ids = [...r.courts.flatMap((c) => [...c.teamA, ...c.teamB]), ...r.sitOuts];
+    if (new Set(ids).size !== ids.length) issues.push(`Round ${r.number}: a player appears more than once`);
+    for (const c of r.courts) {
+      if (c.type === 'singles' && [...c.teamA, ...c.teamB].some((id) => byId.get(id)?.singlesOptOut))
+        issues.push(`Round ${r.number}: singles opt-out player on singles court`);
+      if (c.type !== 'singles' && !(c.type === 'doubles' || c.type === '2v1' ? [...c.teamA, ...c.teamB].every((id) => byId.get(id) && levelInfo(byId.get(id).level).beginner) : false)) {
+        const key = matchKey(c);
+        if (seenMatches.has(key)) issues.push(`Round ${r.number} court ${c.court}: identical to round ${seenMatches.get(key)}`);
+        else seenMatches.set(key, r.number);
+      }
+    }
+  }
+  return issues;
+}
+
+function formatRound(round, players) {
+  const nm = new Map(players.map((p) => [p.id, p.name]));
+  const t = (ids) => ids.map((i) => nm.get(i)).join(' & ');
+  const lines = [`Round ${round.number}${round.locked ? ' [locked]' : ''}`];
+  for (const c of round.courts) lines.push(`  Court ${c.court} (${c.type}): ${t(c.teamA)}  vs  ${t(c.teamB)}`);
+  if (round.sitOuts.length) lines.push(`  Sitting out: ${t(round.sitOuts)}`);
+  for (const w of round.warnings) lines.push(`  ! ${w}`);
+  return lines.join('\n');
+}
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'pickleball-groups-v1';
+  var S = load() || fresh();
+
+  function newId() { return 'p' + Math.random().toString(36).slice(2, 9); }
+  function fresh() {
+    var players = [];
+    for (var i = 1; i <= MAX_PLAYERS; i++) players.push({ id: newId(), name: 'Player ' + i, level: i <= 5 ? 1 : i <= 10 ? 2 : 3, active: true, singlesOptOut: false });
+    var rounds = [];
+    for (var r = 1; r <= DEFAULT_ROUNDS; r++) rounds.push({ number: r, locked: false, courts: [], sitOuts: [], warnings: [] });
+    return { players: players, rounds: rounds, sig: null, genSig: null, groups: [], settings: { style: DEFAULT_MIXING }, tab: null, name: '' };
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      return validState(JSON.parse(raw));
+    } catch (e) { return null; }
+  }
+  function validState(s) {
+    if (!s || !Array.isArray(s.players) || !Array.isArray(s.rounds) || s.rounds.length < MIN_ROUNDS || s.rounds.length > MAX_ROUNDS) return null;
+    if (s.players.length > MAX_PLAYERS) return null;
+    s.players.forEach(function (p) { p.id = String(p.id || newId()); p.name = String(p.name || ''); p.active = p.active !== false; p.singlesOptOut = !!p.singlesOptOut; p.level = levelInfo(p.level).value; });
+    s.rounds.forEach(function (r, i) { r.number = i + 1; r.locked = !!r.locked; r.edited = !!r.edited; r.courts = r.courts || []; r.sitOuts = r.sitOuts || []; r.warnings = r.warnings || []; });
+    s.name = typeof s.name === 'string' ? s.name.slice(0, 60) : '';
+    if (s.sig === undefined) s.sig = null;
+    s.genSig = typeof s.genSig === 'string' ? s.genSig : null;
+    s.groups = Array.isArray(s.groups) ? s.groups.filter(function (v, i, a) { return LEVELS.some(function (l) { return l.value === v; }) && a.indexOf(v) === i; }) : [];
+    // Session style (0 Competitive, 1 Social; Social is the default). Older saves stored a 3-way "mixing" value: Strict/Balanced -> Competitive, High -> Social.
+    var st = s.settings && s.settings.style, old = s.settings && s.settings.mixing;
+    if (!MIXING[st]) st = (old === undefined || old === null) ? DEFAULT_MIXING : (old === 2 ? 1 : 0);
+    s.settings = { style: +st };
+    if (s.tab !== 'players' && s.tab !== 'fixtures') s.tab = null;
+    return s;
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable: app still works */ } }
+
+  function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function named(p) { return !!(p.name && p.name.trim()); }
+  function isOn(p) { return p.active && named(p); }   // a player with no name is never in play
+  function activePlayers() { return S.players.filter(isOn); }
+  // Everything the generator's output depends on: the style, the roster (order = ranking), and the locked rounds'
+  // contents (unlocked rounds are rebuilt from scratch, so their old contents do not matter). Names do not matter.
+  function genSig() {
+    return JSON.stringify([S.settings.style,
+      S.players.map(function (p) { return [p.id, p.level, isOn(p) ? 1 : 0, p.singlesOptOut ? 1 : 0]; }),
+      S.rounds.map(function (r) { return r.locked ? [r.courts, r.sitOuts] : 0; })]);
+  }
+  // True when pressing Regenerate would give back exactly the rounds already on screen.
+  function upToDate() {
+    return generated() && S.genSig === genSig() && !S.rounds.some(function (r) { return !r.locked && r.edited; });
+  }
+  function clubAvailable() { return clubSheetAvailable(activePlayers().length, S.rounds.length); }
+  var styleNote = '', clubNote = '';   // clubNote is only shown while the rounds are still the club sheets
+  // The club sheets are a starting point for a fresh session: right after they are applied the style goes back to
+  // Social (without making Regenerate available), so later changes are rebuilt in that style. If they are selected
+  // but no longer possible (round count, number of players) the style also goes back to Social.
+  function checkClubStyle() {
+    if (S.settings.style !== CLUB_STYLE || clubAvailable()) return;
+    S.settings.style = DEFAULT_MIXING; save();
+    styleNote = 'The session style is back to Social: the club sheets need exactly ' + CLUB_ROUNDS + ' rounds and a sheet for the number of active players (6 to 14).';
+    var sel = document.getElementById('style'); if (sel) sel.value = String(S.settings.style);
+  }
+  function renderGenButton() {
+    checkClubStyle();
+    var opt = document.getElementById('club-opt');
+    if (opt) { opt.disabled = !clubAvailable(); opt.title = clubAvailable() ? '' : 'Needs exactly ' + CLUB_ROUNDS + ' rounds and 6 to 14 active players'; }
+    var b = document.getElementById('gen-btn'), same = upToDate();
+    b.textContent = generated() ? 'Regenerate rounds' : 'Generate rounds';
+    b.disabled = same;
+    b.title = same ? 'Nothing has changed since the rounds were generated' : '';
+  }
+  function sig() { return JSON.stringify([S.settings.style, activePlayers().map(function (p) { return [p.id, p.singlesOptOut, p.level]; })]); }
+  function generated() { return S.rounds.some(function (r) { return r.courts.length || r.sitOuts.length; }); }
+  function used(id) {
+    return S.rounds.some(function (r) {
+      return r.sitOuts.indexOf(id) >= 0 || r.courts.some(function (c) { return c.teamA.indexOf(id) >= 0 || c.teamB.indexOf(id) >= 0; });
+    });
+  }
+  function nm(id) { var p = S.players.filter(function (x) { return x.id === id; })[0]; return p ? p : null; }
+
+  // ---------------------------------------------------------------- rendering
+  function renderStatus() {
+    var n = activePlayers().length, html = '';
+    var l = LAYOUTS[n];
+    var parts = [];
+    if (l) {
+      if (l.d) parts.push(l.d + ' doubles');
+      if (l.t) parts.push('1 × 2v1');
+      if (l.s) parts.push('singles');
+      var cap = 4 * l.d + 3 * l.t + 2 * l.s;
+      var sit = n - cap;
+      html += '<div class="muted" style="margin-top:8px"><b>' + n + ' active</b> &rarr; ' + (parts.join(' + ') || 'no matches possible') + (sit > 0 ? ' + ' + sit + ' sitting out' : '') + (upToDate() ? ' &middot; up to date' : '') + '</div>';
+    }
+    if (n < 2) html += '<div class="banner">At least 2 active players are needed.</div>';
+    var opt = activePlayers().filter(function (p) { return p.singlesOptOut; }).length;
+    if (l && l.s && (n - opt) < 2) html += '<div class="banner">Too many players have opted out of singles for a singles court to be filled.</div>';
+    // Does the schedule need regenerating? (roster/settings changed, or rounds were added)
+    var stale = generated() && S.sig !== null && S.sig !== sig();
+    var empty = generated() && !stale && S.rounds.some(function (r) { return !r.courts.length && !r.sitOuts.length; });
+    var msg = stale ? 'The roster or setup has changed since the fixtures were generated.' : empty ? 'Some rounds have no fixtures yet.' : '';
+    var keep = ' Locked rounds stay as they are.';
+    if (styleNote) html += '<div class="banner">' + styleNote + '</div>';
+    if (clubNote && upToDate()) html += '<div class="banner">' + clubNote + '</div>';
+    document.getElementById('status').innerHTML = html +
+      (msg ? '<div class="banner">' + msg + ' Press Regenerate rounds to update the unlocked rounds.' + keep + '</div>' : '');
+    document.getElementById('status-players').innerHTML = html.replace(/<div class="muted" style="margin-top:8px">.*?<\/div>/, '') +
+      (msg ? '<div class="banner">' + msg + ' Open the Fixtures tab and press Regenerate rounds.' + keep +
+        ' <button type="button" data-tab="fixtures" style="margin-top:6px">Open Fixtures</button></div>' : '');
+  }
+
+  function renderSetupSummary() {
+    var n = S.rounds.length;
+    document.getElementById('rounds-count').value = String(n);
+    document.getElementById('style').value = String(S.settings.style);
+    renderGenButton();
+  }
+
+  function renderRosterCount() {
+    var cnt = {}, unnamed = S.players.filter(function (p) { return !named(p); }).length;
+    activePlayers().forEach(function (p) { cnt[p.level] = (cnt[p.level] || 0) + 1; });
+    var rc = document.getElementById('roster-count');
+    rc.textContent = '';
+    rc.appendChild(document.createTextNode(S.players.length + ' / ' + MAX_PLAYERS + ' players'));
+    var extra = document.createElement('span'); extra.className = 'rc-extra';   // hidden on phones
+    extra.textContent = ' \u00b7 ' + LEVELS.map(function (l) { return l.short + ': ' + (cnt[l.value] || 0); }).join(' \u00b7 ') +
+      (unnamed ? ' \u00b7 ' + unnamed + ' without a name (not playing)' : '');
+    rc.appendChild(extra);
+  }
+  // Players grouped by group (strongest group first). Within a group the roster order is the ranking: first = strongest.
+  function groupMembers(level) { return S.players.filter(function (p) { return p.level === level; }); }
+  // Groups shown in the roster: Group 1 and Beginner always, any group that has players, and groups added with Add group.
+  var ALWAYS_GROUPS = [1, 4];
+  function groupShown(l) { return ALWAYS_GROUPS.indexOf(l.value) >= 0 || S.groups.indexOf(l.value) >= 0 || groupMembers(l.value).length > 0; }
+  function nextHiddenGroup() { return LEVELS.filter(function (l) { return !groupShown(l); })[0] || null; }
+  function rosterOrder() { var out = []; LEVELS.forEach(function (l) { out.push.apply(out, groupMembers(l.value)); }); return out; }
+
+  function rowHtml(p, i, n) {
+    var nmTxt = esc(p.name || 'player');
+    var mv = n > 1 ? '<div class="mv"><button type="button" class="icon" data-action="ordup" aria-label="Move ' + nmTxt + ' up in ranking"' + (i === 0 ? ' disabled' : '') + '>&#9650;</button>' +
+      '<button type="button" class="icon" data-action="orddown" aria-label="Move ' + nmTxt + ' down in ranking"' + (i === n - 1 ? ' disabled' : '') + '>&#9660;</button></div>' : '';
+    return '<div class="roster-row' + (isOn(p) ? '' : ' inactive') + (named(p) ? '' : ' unnamed') + '" data-id="' + p.id + '">' +
+      (n > 1 ? '<span class="grip" title="Drag to rank" aria-hidden="true">&#8942;&#8942;</span>' : '<span class="grip" style="visibility:hidden" aria-hidden="true">&#8942;&#8942;</span>') +
+      '<input type="text" class="nm" data-field="name" value="' + esc(p.name) + '" placeholder="Player name" aria-label="Player name" maxlength="40" autocomplete="off" autocapitalize="words" enterkeyhint="done">' +
+      '<select class="lvl lv' + p.level + '" data-field="level" aria-label="Group">' + LEVELS.filter(function (l) { return groupShown(l) || l.value === p.level; }).map(function (l) { return '<option class="lv' + l.value + '" value="' + l.value + '"' + (l.value === p.level ? ' selected' : '') + '>' + l.label + '</option>'; }).join('') + '</select>' +
+      '<div class="sub"><div class="opts"><label><input type="checkbox" data-field="active"' + (isOn(p) ? ' checked' : '') + (named(p) ? '' : ' disabled') + '> Active</label> ' +
+      '<label><input type="checkbox" data-field="singlesOptOut"' + (p.singlesOptOut ? ' checked' : '') + '> No singles</label></div>' + mv + '</div>' +
+      '<div class="rm"><button class="icon danger" data-action="remove" aria-label="Remove"' + (used(p.id) ? ' disabled title="Used in a round: deactivate instead"' : '') + '>&times;</button></div>' +
+      '</div>';
+  }
+  function renderRoster() {
+    var html = '';
+    {
+      if (!S.players.length) html += '<p class="muted" style="margin:8px 0">No players yet. Tap <b>+ Add</b> in a group, then name each player. <b>Add group</b> shows Groups 2 and 3.</p>';
+      LEVELS.forEach(function (l) {
+        var m = groupMembers(l.value), on = m.filter(isOn).length;
+        if (!groupShown(l)) return;
+        html += '<div class="grp-sec' + (m.length ? '' : ' empty') + '" data-level="' + l.value + '">' +
+          '<div class="grp-head lv' + l.value + '"><h3>' + l.label + '</h3><span class="cnt">' + (m.length ? m.length + (m.length === 1 ? ' player' : ' players') + (on !== m.length ? ' · ' + on + ' active' : '') : 'none') + '</span><span class="spacer"></span>' +
+          '<button type="button" data-action="add" data-level="' + l.value + '" aria-label="Add a player to ' + l.label + '"' + (S.players.length >= MAX_PLAYERS ? ' disabled' : '') + '>+ Add</button>' + '</div>';
+        m.forEach(function (p, i) { html += rowHtml(p, i, m.length); });
+        html += '</div>';
+      });
+    }
+    document.getElementById('roster').innerHTML = html;
+    renderRosterCount();
+    document.querySelector('.toolbar [data-action="addgroup"]').disabled = !nextHiddenGroup();
+    syncModal();
+    renderGenButton(); renderStatus();   // ranking changes what Regenerate would do
+  }
+  // Move a player to a new rank within their own group (roster order is the ranking).
+  function moveInGroup(id, toIdx) {
+    var p = nm(id); if (!p) return false;
+    var m = groupMembers(p.level), from = m.indexOf(p);
+    toIdx = Math.max(0, Math.min(m.length - 1, toIdx));
+    if (from === toIdx) return false;
+    var target = m[toIdx];
+    S.players.splice(S.players.indexOf(p), 1);
+    var ti = S.players.indexOf(target);
+    S.players.splice(toIdx > from ? ti + 1 : ti, 0, p);
+    save(); return true;
+  }
+
+  function nameHtml(id) {
+    var p = nm(id);
+    if (!p) return '<span class="dim">(removed)</span>';
+    var li = levelInfo(p.level), tag = '<span class="tag lv' + li.value + '" title="' + li.label + '">' + li.short + '</span>';
+    return '<span class="' + (isOn(p) ? '' : 'dim') + '">' + esc(p.name || '(unnamed)') + '</span>' + tag;
+  }
+  // In swap mode each player is a button (chip) carrying data-pid; otherwise plain text.
+  function slotHtml(id, edit) {
+    if (!edit) return '<span>' + nameHtml(id) + '</span>';
+    return '<button type="button" class="pl' + (id === selId ? ' sel' : '') + '" data-pid="' + esc(id) + '" aria-pressed="' + (id === selId) + '">' + nameHtml(id) + '</button>';
+  }
+  function teamHtml(ids, edit) { return ids.map(function (i) { return slotHtml(i, edit); }).join(''); }
+  // An empty seat on a 2v1 court (edit mode): drop or tap a player here to make the court doubles.
+  // Court 4 is a half court: singles only, so it never offers empty seats. Doubles courts are full.
+  function canGrow(c) { return c.type !== 'doubles' && c.court !== HALF_COURT_NUMBER; }
+  function seatHtml(c, side) {
+    var grows = c.type === 'singles' ? '2 v 1' : 'doubles';
+    return '<button type="button" class="seat' + (selId !== null ? ' ready' : '') + '" data-slot="' + c.court + '" data-side="' + side + '" aria-label="Empty seat on court ' + c.court + ': add a player to make it ' + grows + '"><span>+ Add player</span><small>makes ' + grows + '</small></button>';
+  }
+
+  var editRound = null, selId = null, editMsg = ''; // swap mode: which round is being edited, the player picked so far, and a short notice
+
+  function renderRounds() {
+    var html = '';
+    S.rounds.forEach(function (r) {
+      var has = r.courts.length || r.sitOuts.length;
+      var edit = editRound === r.number;
+      html += '<div class="round' + (r.locked ? ' locked' : '') + (edit ? ' editing' : editRound !== null ? ' paused' : '') + '"' + (editRound !== null && !edit ? ' inert' : '') + ' data-round="' + r.number + '">' +
+        '<div class="round-head"><h3>Round ' + r.number + (edit ? '<span class="edit-badge">Editing</span>' : '') + '</h3><div class="round-actions">' +
+        '<button data-action="swapmode"' + (has ? '' : ' disabled') + ' aria-pressed="' + edit + '">' + (edit ? 'Done' : 'Edit') + '</button>' +
+        '<button data-action="lock"' + (has ? '' : ' disabled') + '>' + (r.locked ? '🔒 Locked' : 'Lock') + '</button></div></div>';
+      if (edit) html += '<p class="swap-hint"><b>Tap Done when you have finished.</b> Tap two players to swap them, or drag one onto another. Singles and 2 v 1 courts have empty seats: move a player onto one to add them to that court.</p>' + (editMsg ? '<p class="edit-msg" role="alert">' + esc(editMsg) + '</p>' : '');
+      if (!has) html += '<div class="muted">Not generated yet.</div>';
+      r.courts.forEach(function (c) {
+        var label = c.type === 'doubles' ? 'Doubles' : c.type === '2v1' ? '2 v 1' : 'Singles';
+        var subA = c.type === '2v1' ? '<span class="sub">solo</span>' : '';
+        var subB = c.type === '2v1' ? '<span class="sub">tandem</span>' : '';
+        html += '<div class="court"><div class="court-title">Court ' + c.court + ' &middot; ' + label + '</div>' +
+          '<div class="match"><div class="team">' + subA + teamHtml(c.teamA, edit) + (edit && canGrow(c) ? seatHtml(c, 'A') : '') + '</div><div class="vs">vs</div>' +
+          '<div class="team b">' + subB + teamHtml(c.teamB, edit) + (edit && canGrow(c) && c.type === 'singles' ? seatHtml(c, 'B') : '') + '</div></div></div>';
+      });
+      if (r.sitOuts.length) html += '<div class="sit"><b>Sitting out:</b> ' + r.sitOuts.map(function (i) { return edit ? slotHtml(i, true) : nameHtml(i); }).join(edit ? ' ' : ', ') + '</div>';
+      if (r.edited) html += '<p class="edited">&#9998; Edited by hand &middot; locked, so Regenerate leaves it as it is. Unlock it to let Regenerate redo it.</p>';
+      r.warnings.forEach(function (w) { html += '<div class="banner">' + esc(w) + '</div>'; });
+      html += '</div>';
+    });
+    document.getElementById('rounds').innerHTML = html;
+    syncModal();
+    renderGenButton(); renderStatus();   // locks change what Regenerate would do
+    renderSummary();                     // hand edits and locks change the per-player counts
+  }
+  // While a round is being edited (or players are being ordered) the rest of the page is dimmed and inert, so
+  // there is only one thing to do: finish.
+  function syncModal() {
+    var edit = editRound !== null, on = edit;
+    function mark(el, v) { if (!el) return; el.classList.toggle('dim-edit', v); if (v) el.setAttribute('inert', ''); else el.removeAttribute('inert'); }
+    mark(document.getElementById('controls'), edit); mark(document.getElementById('summary-section'), edit);
+    mark(document.getElementById('tab-players'), on); mark(document.getElementById('tab-fixtures'), on);
+    mark(document.querySelector('.new-btn'), on);
+    document.body.classList.toggle('editing', edit);
+  }
+
+  function renderSummary() {
+    var rows = '', isBeg = function (q) { return !!levelInfo(q.level).beginner; },
+        // the B games column only appears when a beginner is actually playing in the fixtures
+        showB = S.rounds.some(function (r) { return r.courts.some(function (c) { return c.teamA.concat(c.teamB).some(function (id) { var q = nm(id); return q && isBeg(q); }); }); });
+    // games a player has played on a court with at least one beginner (someone else); not applicable to beginners themselves
+    function begGames(p) {
+      var n = 0;
+      S.rounds.forEach(function (r) { r.courts.forEach(function (c) {
+        var ids = c.teamA.concat(c.teamB);
+        if (ids.indexOf(p.id) >= 0 && ids.some(function (id) { var q = nm(id); return q && id !== p.id && isBeg(q); })) n++;
+      }); });
+      return n;
+    }
+    rosterOrder().forEach(function (p) {
+      var h = getPlayerHistory(S.rounds, p.id);
+      var partners = {}; h.partners.forEach(function (x) { partners[x] = 1; });
+      var played = h.rounds.filter(function (x) { return !x.sitOut; }).length;
+      var li = levelInfo(p.level);
+      rows += '<tr><td><span class="' + (isOn(p) ? '' : 'dim') + '">' + esc(p.name || '(unnamed)') + '</span><span class="tag lv' + li.value + '" title="' + li.label + '">' + li.short + '</span>' + (isOn(p) ? '' : ' <span class="muted">(inactive)</span>') + '</td>' +
+        '<td class="n">' + played + '</td><td class="n">' + (h.singlesMatches + h.soloMatches) + '</td>' +
+        (showB ? '<td class="n">' + (isBeg(p) ? '<span class="muted" title="Not counted for beginners">&ndash;</span>' : begGames(p)) + '</td>' : '') +
+        '<td class="n">' + Object.keys(partners).length + '</td></tr>';
+    });
+    document.getElementById('summary').innerHTML = '<div class="scroll-x"><table><thead><tr><th>Player</th><th class="n">Rounds played</th><th class="n">Singles</th>' + (showB ? '<th class="n" title="Games played on a court with a beginner">B games</th>' : '') + '<th class="n">Different partners</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function renderTitle(typing) {
+    var n = (S.name || '').trim(), inp = document.getElementById('session-name');
+    document.title = 'Pickleball Session Manager' + (n ? ': ' + n : '') + ' (Groups)';
+    document.getElementById('title').classList.toggle('has-name', !!n || document.activeElement === inp);
+    if (!typing) inp.value = S.name || '';              // not while the user is typing in it
+    inp.style.width = Math.max(6, (inp.value || '').length + 1) + 'ch';
+  }
+
+  function renderAll() {
+    renderTitle();
+    renderSetupSummary();
+    renderStatus(); renderRoster(); renderRounds(); renderSummary();
+    document.querySelector('[data-action="clearall"]').disabled = !generated();
+  }
+
+  // ---------------------------------------------------------------- tabs
+  function initialTab() { return S.tab || (generated() ? 'fixtures' : 'players'); }
+  function showTab(t) {
+    if (t !== 'players' && t !== 'fixtures') t = 'players';
+    S.tab = t;
+    ['players', 'fixtures'].forEach(function (k) {
+      var on = k === t, b = document.getElementById('tab-' + k);
+      document.getElementById('panel-' + k).hidden = !on;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.tabIndex = on ? 0 : -1;
+      document.getElementById('info-' + k).hidden = !on;
+    });
+    setInfo(false);
+    save();
+  }
+  // Help popover (top right): shows the help for whichever tab is open
+  function setInfo(open) {
+    document.getElementById('info-pop').hidden = !open;
+    document.getElementById('info-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  document.getElementById('info-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    setInfo(document.getElementById('info-pop').hidden);
+  });
+  document.getElementById('info-close').addEventListener('click', function () { setInfo(false); document.getElementById('info-btn').focus(); });
+  document.addEventListener('click', function (e) {
+    if (!document.getElementById('info-pop').hidden && !e.target.closest('#info-pop')) setInfo(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hideConfirm();
+    if (e.key === 'Escape' && editRound !== null && document.getElementById('info-pop').hidden) { editRound = null; selId = null; editMsg = ''; renderRounds(); }
+    if (e.key === 'Escape' && !document.getElementById('info-pop').hidden) { setInfo(false); document.getElementById('info-btn').focus(); }
+  });
+  function toTop() { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }
+
+  // ---------------------------------------------------------------- actions
+  function regenerate() {
+    if (activePlayers().length < 2) { renderStatus(); return false; }
+    if (upToDate()) return false;   // nothing has changed: the generator is deterministic, so it would give the same rounds
+    editRound = null; selId = null;
+    // players without a name are never in play, so the generator sees them as inactive
+    var inPlay = S.players.map(function (p) { return isOn(p) ? p : Object.assign({}, p, { active: false }); });
+    regenerateUnlocked({ players: inPlay, rounds: S.rounds }, { mixing: S.settings.style });
+    styleNote = ''; clubNote = '';
+    if (S.settings.style === CLUB_STYLE) {
+      S.settings.style = DEFAULT_MIXING;   // the sheets were only the starting point: further changes use Social
+      clubNote = 'These rounds come from the club sheets. The session style is now Social, so any change you make is rebuilt in that style.';
+    }
+    S.sig = sig(); S.genSig = genSig();   // computed with the new style, so Regenerate stays unavailable
+    save(); renderAll();
+    return true;
+  }
+
+  var suppressClick = false;
+  function doSwap(rnum, a, b) {
+    swapPlayers({ players: S.players, rounds: S.rounds }, rnum, a, b);
+    save();
+  }
+  // Seat a player on a 2v1 court's empty seat. Returns true if it was done.
+  function doSeat(rnum, court, pid, side) {
+    editMsg = '';
+    try { seatPlayer({ players: S.players, rounds: S.rounds }, rnum, court, pid, side); }
+    catch (err) {
+      editMsg = /singles court/.test(err.message) ? 'A singles court needs both of its players, so one can\u2019t be moved out of it. Swap them with someone instead.' :
+        /already on that court/.test(err.message) ? 'That player is already on this court.' :
+        /half court/.test(err.message) ? 'Court 4 is a half court and only takes singles.' : 'That move isn\u2019t possible.';
+      return false;
+    }
+    save(); return true;
+  }
+  function focusChip(rnum, pid) {
+    var el = document.querySelector('[data-round="' + rnum + '"] .pl[data-pid="' + pid + '"]');
+    if (el) el.focus({ preventScroll: true });
+  }
+
+  // Drag and drop (pointer events: mouse, pen and touch). A drag only starts after the pointer moves a few
+  // pixels, so a plain tap still selects. Drops are only accepted on another player in the same round.
+  (function () {
+    var d = null;
+    function chipAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.pl[data-pid], .seat[data-slot]') : null; }
+    function clearOver() { document.querySelectorAll('.pl.over, .seat.over').forEach(function (n) { n.classList.remove('over'); }); }
+    function end() {
+      if (!d) return;
+      if (d.ghost) d.ghost.remove();
+      d.el.classList.remove('drag'); clearOver();
+      d = null;
+    }
+    document.addEventListener('pointerdown', function (e) {
+      var el = e.target.closest ? e.target.closest('.pl[data-pid]') : null;
+      if (!el || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      d = { el: el, id: el.getAttribute('data-pid'), round: el.closest('[data-round]').getAttribute('data-round'), x: e.clientX, y: e.clientY, ghost: null, pid: e.pointerId };
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!d || e.pointerId !== d.pid) return;
+      if (!d.ghost) {
+        if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return;
+        d.ghost = document.createElement('div'); d.ghost.className = 'ghost'; d.ghost.textContent = d.el.firstChild ? d.el.firstChild.textContent : '';
+        document.body.appendChild(d.ghost); d.el.classList.add('drag');
+      }
+      d.ghost.style.left = (e.clientX + 8) + 'px'; d.ghost.style.top = (e.clientY + 8) + 'px';
+      clearOver();
+      var t = chipAt(e.clientX, e.clientY);
+      if (t && t !== d.el && t.closest('[data-round]').getAttribute('data-round') === d.round) t.classList.add('over');
+    });
+    document.addEventListener('pointerup', function (e) {
+      if (!d || e.pointerId !== d.pid) return;
+      var moved = !!d.ghost, from = d;
+      var t = moved ? chipAt(e.clientX, e.clientY) : null;
+      end();
+      if (!moved) return;
+      suppressClick = true; setTimeout(function () { suppressClick = false; }, 0);
+      if (t && t.getAttribute('data-pid') !== from.id && t.closest('[data-round]').getAttribute('data-round') === from.round) {
+        editMsg = '';
+        if (t.hasAttribute('data-slot')) doSeat(+from.round, +t.getAttribute('data-slot'), from.id, t.getAttribute('data-side'));
+        else doSwap(+from.round, from.id, t.getAttribute('data-pid'));
+        selId = null; renderRounds(); focusChip(+from.round, from.id);
+      }
+    });
+    document.addEventListener('pointercancel', end);
+  })();
+
+  // Drag to rank (wide layouts): grab a row's handle and drop it on another row of the same group. A drop on a
+  // row in a different group is ignored, because ranks are only compared within a group.
+  (function () {
+    var d = null;
+    function rowAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.roster-row') : null; }
+    function sameGroup(row) { return row && row.closest('.grp-sec') === d.sec; }
+    function clearOver() { document.querySelectorAll('.roster-row.over').forEach(function (n) { n.classList.remove('over'); }); }
+    function end() { if (!d) return; if (d.ghost) d.ghost.remove(); d.row.classList.remove('drag'); clearOver(); d = null; }
+    document.addEventListener('pointerdown', function (e) {
+      var g = e.target.closest ? e.target.closest('.grip') : null;
+      if (!g || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      var row = g.closest('.roster-row');
+      d = { row: row, id: row.getAttribute('data-id'), sec: row.closest('.grp-sec'), x: e.clientX, y: e.clientY, ghost: null, pid: e.pointerId };
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!d || e.pointerId !== d.pid) return;
+      if (!d.ghost) {
+        if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return;
+        d.ghost = document.createElement('div'); d.ghost.className = 'ghost'; d.ghost.textContent = d.row.querySelector('.nm').value || 'player';
+        document.body.appendChild(d.ghost); d.row.classList.add('drag');
+      }
+      d.ghost.style.left = (e.clientX + 8) + 'px'; d.ghost.style.top = (e.clientY + 8) + 'px';
+      clearOver();
+      var t = rowAt(e.clientX, e.clientY);
+      if (t && t !== d.row && sameGroup(t)) t.classList.add('over');
+    });
+    document.addEventListener('pointerup', function (e) {
+      if (!d || e.pointerId !== d.pid) return;
+      var moved = !!d.ghost, from = d, t = moved ? rowAt(e.clientX, e.clientY) : null;
+      end();
+      if (!moved || !t || t === from.row || t.closest('.grp-sec') !== from.sec) return;
+      var p = nm(from.id), m = groupMembers(p.level), tid = t.getAttribute('data-id');
+      moveInGroup(from.id, m.findIndex(function (x) { return x.id === tid; }));
+      renderRoster();
+    });
+    document.addEventListener('pointercancel', end);
+  })();
+
+  document.addEventListener('click', function (e) {
+    var tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) { showTab(tabBtn.getAttribute('data-tab')); toTop(); return; }
+    if (!e.target.closest('#undo-btn, #rounds-count')) clearUndo();
+    if (!e.target.closest('[data-action="clearall"], [data-action="newsession"], #confirm-bar')) hideConfirm();
+    var seat = e.target.closest('.seat[data-slot]');
+    if (seat) {
+      if (suppressClick) { suppressClick = false; return; }
+      var sr = +seat.closest('[data-round]').getAttribute('data-round');
+      if (selId === null) { editMsg = 'Pick a player first, then tap the empty seat.'; renderRounds(); return; }
+      var moved = selId; doSeat(sr, +seat.getAttribute('data-slot'), moved, seat.getAttribute('data-side')); selId = null; renderRounds(); focusChip(sr, moved); return;
+    }
+    var chip = e.target.closest('.pl[data-pid]');
+    if (chip) {
+      editMsg = '';
+      if (suppressClick) { suppressClick = false; return; }
+      var rnum = +chip.closest('[data-round]').getAttribute('data-round'), pid = chip.getAttribute('data-pid');
+      if (selId === null) selId = pid;
+      else if (selId === pid) selId = null;
+      else { doSwap(rnum, selId, pid); selId = null; }
+      renderRounds(); focusChip(rnum, pid); return;
+    }
+    var btn = e.target.closest('[data-action]');
+    if (!btn || btn.disabled) return;
+    var action = btn.getAttribute('data-action');
+    var rowEl = btn.closest('[data-id]');
+    var idx = rowEl ? S.players.findIndex(function (p) { return p.id === rowEl.getAttribute('data-id'); }) : -1;
+    if (action === 'regenerate') { regenerate(); return; }
+    if (action === 'clearall') {              // asks first (inline: confirm() dialogs are blocked in embedded pages)
+      if (!generated()) return;
+      askConfirm('Clear all rounds, including locked ones? Players and settings are kept.', 'Clear all', doClearAll);
+      return;
+    }
+    if (action === 'newsession') {
+      askConfirm('Start a new session? This clears all players, all rounds and the session name.', 'New session', doNewSession);
+      return;
+    }
+    if (action === 'add') {
+      if (S.players.length >= MAX_PLAYERS) return;
+      var lvl = levelInfo(+btn.getAttribute('data-level') || 1).value, np = { id: newId(), name: '', level: lvl, active: true, singlesOptOut: false };
+      S.players.push(np);   // last in its group: the weakest rank until the user orders it
+      save(); renderAll();
+      var nrow = document.querySelector('#roster .roster-row[data-id="' + np.id + '"]');
+      if (nrow) { var inp = nrow.querySelector('.nm'); inp.focus({ preventScroll: true }); if (nrow.scrollIntoView) nrow.scrollIntoView({ block: 'nearest' }); }
+      return;
+    }
+    if (action === 'addgroup') {
+      var ng = nextHiddenGroup(); if (!ng) return;
+      S.groups.push(ng.value); save(); renderRoster();
+      var gh = document.querySelector('#roster .grp-sec[data-level="' + ng.value + '"]'); if (gh && gh.scrollIntoView) gh.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (action === 'ordup' || action === 'orddown') {
+      var oid = btn.closest('[data-id]').getAttribute('data-id'), op = nm(oid);
+      if (op) { var om = groupMembers(op.level); moveInGroup(oid, om.indexOf(op) + (action === 'ordup' ? -1 : 1)); }
+      renderRoster();
+      var again = document.querySelector('#roster [data-id="' + oid + '"] [data-action="' + action + '"]:not(:disabled)') || document.querySelector('#roster [data-id="' + oid + '"] [data-action]:not(:disabled)');
+      if (again) again.focus({ preventScroll: true });
+      return;
+    }
+    if (action === 'swapmode') {
+      var n2 = +btn.closest('[data-round]').getAttribute('data-round');
+      editRound = editRound === n2 ? null : n2; selId = null; editMsg = ''; return renderRounds();
+    }
+    if (action === 'lock') {
+      var rn = +btn.closest('[data-round]').getAttribute('data-round');
+      var r = S.rounds[rn - 1]; r.locked = !r.locked; save(); return renderRounds();
+    }
+    if (idx < 0) return;
+    if (action === 'remove' && !used(S.players[idx].id)) S.players.splice(idx, 1);
+    save(); renderAll();
+  });
+
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.getAttribute('data-field') === 'name') clearUndo();
+    if (el.getAttribute('data-field') !== 'name') return;
+    var p = nm(el.closest('[data-id]').getAttribute('data-id'));
+    if (!p) return;
+    p.name = el.value; save(); renderRounds(); renderSummary(); // no roster re-render: keeps focus
+    var row = el.closest('.roster-row'), cb = row.querySelector('[data-field="active"]');
+    row.classList.toggle('unnamed', !named(p)); row.classList.toggle('inactive', !isOn(p));
+    cb.disabled = !named(p); cb.checked = isOn(p); renderRosterCount();
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target, field = el.getAttribute('data-field');
+    if (field) clearUndo();
+    if (field !== 'active' && field !== 'singlesOptOut' && field !== 'level') return;
+    var p = nm(el.closest('[data-id]').getAttribute('data-id'));
+    if (!p) return;
+    if (field === 'level') {
+      var nl = levelInfo(+el.value).value;
+      if (nl !== p.level) { p.level = nl; S.players.splice(S.players.indexOf(p), 1); S.players.push(p); }   // joins the new group as its weakest
+    } else p[field] = el.checked;
+    save(); renderAll();
+  });
+
+  document.getElementById('style').addEventListener('change', function (e) {
+    var v = +e.target.value;
+    if (!MIXING[v]) return;
+    if (v === CLUB_STYLE && !clubAvailable()) { e.target.value = String(S.settings.style); return; }
+    S.settings.style = v; styleNote = ''; clubNote = '';
+    save(); renderSetupSummary(); renderStatus();
+  });
+
+  // Undo bar. confirm() dialogs are blocked inside sandboxed/embedded pages (the choice silently came back
+  // as "no", so the round count could not be reduced), so destructive actions apply at once and can be undone.
+  var undo = null;
+  function showUndo(msg, fn) {
+    undo = fn;
+    document.getElementById('undo-msg').textContent = msg;
+    document.getElementById('undo-bar').hidden = false;
+  }
+  function clearUndo() { if (!undo) return; undo = null; document.getElementById('undo-bar').hidden = true; }
+  document.getElementById('undo-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var fn = undo; clearUndo();
+    if (fn) { fn(); save(); renderAll(); }
+  });
+  var confirmFn = null;
+  function askConfirm(msg, yesLabel, fn) {
+    confirmFn = fn;
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-yes').textContent = yesLabel;
+    document.getElementById('confirm-bar').hidden = false;
+    document.getElementById('confirm-no').focus({ preventScroll: true });
+  }
+  function hideConfirm() { confirmFn = null; document.getElementById('confirm-bar').hidden = true; }
+  document.getElementById('confirm-no').addEventListener('click', function (e) { e.stopPropagation(); hideConfirm(); });
+  document.getElementById('confirm-yes').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var fn = confirmFn; hideConfirm();
+    if (fn) fn();
+  });
+  function emptyRounds(n) {
+    var out = [];
+    for (var i = 1; i <= n; i++) out.push({ number: i, locked: false, edited: false, courts: [], sitOuts: [], warnings: [] });
+    return out;
+  }
+  function doClearAll() {
+    if (!generated()) return;
+    var snapRounds = JSON.parse(JSON.stringify(S.rounds)), snapSig = S.sig, snapGen = S.genSig;
+    S.rounds = emptyRounds(S.rounds.length);
+    S.sig = null; S.genSig = null; editRound = null; selId = null;
+    save(); renderAll();
+    showUndo('Cleared all rounds.', function () { S.rounds = snapRounds; S.sig = snapSig; S.genSig = snapGen; });
+  }
+  function doNewSession() {
+    clearUndo();
+    S = { players: [], rounds: emptyRounds(S.rounds.length), sig: null, genSig: null, groups: [], settings: { style: S.settings.style === CLUB_STYLE ? DEFAULT_MIXING : S.settings.style }, tab: 'players', name: '' };
+    styleNote = ''; clubNote = '';
+    editRound = null; selId = null;
+    save(); renderAll(); showTab('players'); toTop();
+  }
+  document.getElementById('name-edit').addEventListener('click', function () {
+    var t = document.getElementById('title');
+    t.classList.add('has-name');   // reveal the field first so it can take focus
+    document.getElementById('session-name').focus();
+    if (document.activeElement.id !== 'session-name') t.classList.remove('has-name');
+  });
+  document.getElementById('session-name').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
+  document.getElementById('session-name').addEventListener('blur', function () { renderTitle(true); });
+  document.getElementById('session-name').addEventListener('input', function (e) {
+    clearUndo(); hideConfirm();
+    S.name = e.target.value.slice(0, 60); save(); renderTitle(true);
+  });
+  function hasContent(r) { return r.courts.length || r.sitOuts.length; }
+
+  document.getElementById('rounds-count').addEventListener('change', function (e) {
+    clearUndo();
+    var n = +e.target.value;
+    if (!(n >= MIN_ROUNDS && n <= MAX_ROUNDS) || n === S.rounds.length) return;
+    var oldLen = S.rounds.length, dropped = S.rounds.slice(n), lost = dropped.filter(hasContent);
+    setRoundCount({ rounds: S.rounds }, n); // engine helper: grows with empty rounds / trims from the end
+    save(); renderAll();
+    if (lost.length) {
+      var nums = lost.map(function (r) { return r.number; });
+      showUndo('Removed ' + (nums.length === 1 ? 'round ' + nums[0] : 'rounds ' + nums[0] + '\u2013' + nums[nums.length - 1]) + ' and ' + (nums.length === 1 ? 'its' : 'their') + ' fixtures.', function () {
+        if (S.rounds.length === n) dropped.forEach(function (r) { S.rounds.push(r); });
+      });
+    }
+  });
+
+  // Arrow keys move between the two tabs (standard tab-list keyboard behaviour)
+  document.querySelector('.tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var next = S.tab === 'players' ? 'fixtures' : 'players';
+    showTab(next); document.getElementById('tab-' + next).focus(); e.preventDefault();
+  });
+
+  var rs = document.getElementById('rounds-count');
+  for (var i = MIN_ROUNDS; i <= MAX_ROUNDS; i++) {
+    var o = document.createElement('option');
+    o.value = String(i); o.textContent = i + (i === 1 ? ' round' : ' rounds');
+    rs.appendChild(o);
+  }
+  renderAll();
+  showTab(initialTab());
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body>
+</html>
