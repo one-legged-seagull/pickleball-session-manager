@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION whenever index.html changes so phones pick up the new copy.
-var VERSION = 'pb-v53';
+var VERSION = 'pb-v54';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

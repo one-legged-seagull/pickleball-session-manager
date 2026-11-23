@@ -113,6 +113,9 @@
   /* Session-name prompt: shown when a new session starts, and on the very first visit */
   .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, .5); }
   .modal[hidden] { display: none; }
+  /* When the page sits in a frame that has grown to the full page height (so "fixed" would centre on the whole page), the
+     dialog is placed over the spot that opened it instead; see showModal() */
+  .modal.anchored { position: absolute; inset: 0 0 auto 0; align-items: flex-start; }
   .modal-card { width: min(420px, 100%); display: grid; gap: 12px; padding: 18px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
   .modal-card h2 { margin: 0; font-size: 18px; }
   .modal-card p { margin: 0; font-size: 14px; color: var(--muted); }
@@ -1890,6 +1893,22 @@ function formatRound(round, players) {
     editRound = null; selId = null;
     save(); renderAll(); showTab('players'); toTop();
   }
+  // Show a dialog centred on screen. In a frame that is as tall as the page (it never scrolls inside), a fixed overlay would be
+  // centred on the whole page and could be far off screen, so there it is placed around the opening element and scrolled into view.
+  function showModal(m, anchor) {
+    var de = document.documentElement, card = m.querySelector('.modal-card');
+    m.classList.remove('anchored'); m.style.height = ''; card.style.marginTop = '';
+    m.hidden = false;
+    var framed = window.self !== window.top && de.scrollHeight <= window.innerHeight + 4;
+    if (framed) {
+      var full = Math.max(de.scrollHeight, document.body.scrollHeight);
+      m.classList.add('anchored'); m.style.height = full + 'px';
+      var ay = anchor ? anchor.getBoundingClientRect().top + window.pageYOffset : 0;
+      var top = Math.max(8, Math.min(ay - card.offsetHeight / 2, full - card.offsetHeight - 8));
+      card.style.marginTop = top + 'px';
+      if (card.scrollIntoView) card.scrollIntoView({ block: 'center' });
+    }
+  }
   // Player options dialog (Active, No singles, member/guest, payment). Changes apply as you make them.
   var optId = null;
   function syncOptions(p) {
@@ -1905,8 +1924,9 @@ function formatRound(round, players) {
   function openOptions(id) {
     var p = nm(id); if (!p) return;
     optId = id; syncOptions(p);
-    document.getElementById('opt-modal').hidden = false;
-    document.getElementById('op-done').focus();
+    var ob = document.querySelector('#roster .roster-row[data-id="' + id + '"] .opts');
+    showModal(document.getElementById('opt-modal'), ob);
+    document.getElementById('op-done').focus({ preventScroll: true });
   }
   function closeOptions() {
     if (!optId) return;
@@ -1927,8 +1947,8 @@ function formatRound(round, players) {
     document.getElementById('nm-ok').textContent = o.okLabel;
     document.getElementById('nm-cancel').hidden = !o.canCancel;
     var inp = document.getElementById('nm-input'); inp.value = defaultSessionName(); inp.classList.remove('bad');
-    document.getElementById('name-modal').hidden = false;
-    inp.focus(); inp.select();
+    showModal(document.getElementById('name-modal'), document.getElementById('title'));
+    inp.focus({ preventScroll: true }); inp.select();
   }
   function closeName() { nameCb = null; document.getElementById('name-modal').hidden = true; }
   function submitName() {
